@@ -17,11 +17,13 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,9 +64,10 @@ import com.google.gson.JsonSyntaxException;
 /** @author ifly6 */
 public class IflyNationManager {
 	
-	public static final IflyVersion VERSION = new IflyVersion(1, 0, 0);
+	public static final IflyVersion VERSION = new IflyVersion(0, 2);
 	private static Path PERSIST_PATH;
 	private static Path NATIONS_STORE;
+	private static Path HASH_STORE;
 	
 	private JFrame frame;
 	private char[] password;
@@ -85,6 +88,7 @@ public class IflyNationManager {
 		}
 		
 		NATIONS_STORE = PERSIST_PATH.resolve("nations-store.txt");
+		HASH_STORE = PERSIST_PATH.resolve("hash-store");
 		
 		EventQueue.invokeLater(() -> {
 			try {
@@ -127,6 +131,32 @@ public class IflyNationManager {
 					salt = new byte[8];
 					new SecureRandom().nextBytes(salt);
 					saveSalt();
+				}
+			}
+			// hash the password
+			String passwordHash;
+			try {
+				passwordHash = new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
+			} catch (UnsupportedEncodingException | GeneralSecurityException e) {
+				passwordHash = "";
+				e.printStackTrace();
+			}
+			if (!Files.exists(HASH_STORE)) {	// save hash
+				try {
+					Files.write(HASH_STORE, passwordHash.getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else {
+				try {
+					String storedHash = Files.readAllLines(HASH_STORE).get(0);
+					if (!storedHash.equals(passwordHash)) {
+						JOptionPane.showMessageDialog(frame, "Incorrect password.", "Error",
+								JOptionPane.PLAIN_MESSAGE, null);
+						System.exit(0);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}
@@ -380,8 +410,11 @@ public class IflyNationManager {
 				JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE,
 				null, null, "");
 		
-		if (option == JOptionPane.OK_OPTION) { return passwordField.getPassword(); }
-		return new char[0];
+		if (option == JOptionPane.OK_OPTION) {
+			String pass = new String(passwordField.getPassword());
+			if (!IflyStrings.isEmpty(pass)) { return passwordField.getPassword(); }
+		}
+		return "ifnmDefaultPassword".toCharArray();
 	}
 	
 	private void autosave() {

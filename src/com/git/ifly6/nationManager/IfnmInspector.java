@@ -5,6 +5,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.swing.DefaultListModel;
@@ -27,12 +28,13 @@ import com.git.ifly6.nsapi.NSNation;
 public class IfnmInspector {
 	
 	private JFrame frame;
+	protected HashMap<String, NSNation> cachedData = new HashMap<>();
 	
 	/** Create the application. */
 	public IfnmInspector(List<IfnmNation> items) {
 		
 		frame = new JFrame("Inspector");
-		frame.setBounds(100, 100, 400, 300);
+		frame.setBounds(100, 100, 500, 300);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		
 		DefaultListModel<IfnmNation> tableModel = new DefaultListModel<>();
@@ -137,21 +139,26 @@ public class IfnmInspector {
 		list.addListSelectionListener(new ListSelectionListener() {
 			@Override public void valueChanged(ListSelectionEvent e) {
 				IfnmNation data = list.getSelectedValuesList().get(0);
-				NSNation nation = new NSNation(data.getName());
-				try {
-					nation.populateData();
-					lblName.setText(nation.getNationName());
-					lblNationregion.setText(nation.getRegion());
-					lblNationcategory.setText(nation.getCategory());
-					lblEndos.setText(String.valueOf(nation.getEndoCount()));
-				} catch (IOException e1) {
-					JOptionPane.showMessageDialog(frame, "Cannot connect to NationStates.", "Error",
-							JOptionPane.PLAIN_MESSAGE, null);
+				NSNation nation;
+				if (cachedData.get(data.getName()) == null) {
+					nation = new NSNation(data.getName());
+					try {
+						nation.populateData();
+						cachedData.put(data.getName(), nation);
+					} catch (IOException e1) {
+						JOptionPane.showMessageDialog(frame, "Cannot connect to NationStates.", "Error",
+								JOptionPane.PLAIN_MESSAGE, null);
+					}
+				} else {
+					nation = cachedData.get(data.getName());
 				}
+				lblName.setText(nation.getNationName());
+				lblNationregion.setText(nation.getRegion());
+				lblNationcategory.setText(nation.getCategory());
+				lblEndos.setText(String.valueOf(nation.getEndoCount()));
 			}
 		});
 		
-		frame.pack();
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}

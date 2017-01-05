@@ -17,7 +17,7 @@ import sun.misc.BASE64Encoder;
 /** @author ifly6 */
 public class IfnmCipher {
 	
-	public static final String PASSPHRASE = "cyrilparsons";
+	public static final String PERSIST = "cyrilparsons";
 	private char[] password;
 	private byte[] salt;
 	
