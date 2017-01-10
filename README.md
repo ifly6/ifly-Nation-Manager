@@ -1,4 +1,4 @@
-# Communiqué #
+# ifly Nation Manager #
 
 ## Summary ##
 ifly Nation Manager is a free and platform-independent client for NationStates's Telegram API which provides an easy and simple way to manage large numbers of puppets. This program uses parts of my [JavaTelegram](https://github.com/iFlyCode/NationStates-JavaTelegram) library to interface with and provide appropriate connections to the NationStates API.
