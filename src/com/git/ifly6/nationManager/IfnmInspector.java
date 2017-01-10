@@ -3,6 +3,7 @@ package com.git.ifly6.nationManager;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.HeadlessException;
 import java.awt.Insets;
 import java.io.IOException;
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.List;
 import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -19,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
@@ -27,15 +30,20 @@ import com.git.ifly6.nsapi.NSNation;
 /** @author ifly6 */
 public class IfnmInspector {
 	
+	static HashMap<String, NSNation> cachedData = new HashMap<>();	// keep data between instances
+	
 	private JFrame frame;
-	protected HashMap<String, NSNation> cachedData = new HashMap<>();
+	private JLabel lblName;
+	private JLabel lblNationregion;
+	private JLabel lblNationcategory;
+	private JLabel lblEndos;
 	
 	/** Create the application. */
 	public IfnmInspector(List<IfnmNation> items) {
 		
 		frame = new JFrame("Inspector");
 		frame.setBounds(100, 100, 500, 300);
-		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
 		DefaultListModel<IfnmNation> tableModel = new DefaultListModel<>();
 		items.stream().forEach(tableModel::addElement);
@@ -46,25 +54,42 @@ public class IfnmInspector {
 		JScrollPane scrollPane = new JScrollPane(list);
 		
 		JPanel panel = new JPanel();
+		panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		
+		JButton btnPopulateData = new JButton("Populate Data");
+		btnPopulateData.addActionListener((ae) -> {
+			// populate data for all nations in the list
+			for (int i = 0; i < list.getModel().getSize(); i++) {
+				IfnmNation nation = list.getModel().getElementAt(i);
+				populateData(nation);
+			}
+		});
 		
 		GroupLayout groupLayout = new GroupLayout(frame.getContentPane());
 		groupLayout.setHorizontalGroup(
-				groupLayout.createParallelGroup(Alignment.LEADING)
+				groupLayout.createParallelGroup(Alignment.TRAILING)
 						.addGroup(groupLayout.createSequentialGroup()
 								.addContainerGap()
-								.addComponent(scrollPane, GroupLayout.PREFERRED_SIZE, 119, GroupLayout.PREFERRED_SIZE)
+								.addGroup(groupLayout.createParallelGroup(Alignment.LEADING)
+										.addComponent(btnPopulateData, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE,
+												Short.MAX_VALUE)
+										.addComponent(scrollPane, GroupLayout.PREFERRED_SIZE, 171,
+												GroupLayout.PREFERRED_SIZE))
 								.addPreferredGap(ComponentPlacement.RELATED)
-								.addComponent(panel, GroupLayout.DEFAULT_SIZE, 263, Short.MAX_VALUE)
+								.addComponent(panel, GroupLayout.DEFAULT_SIZE, 311, Short.MAX_VALUE)
 								.addContainerGap()));
 		groupLayout.setVerticalGroup(
 				groupLayout.createParallelGroup(Alignment.TRAILING)
-						.addGroup(groupLayout.createSequentialGroup()
+						.addGroup(Alignment.LEADING, groupLayout.createSequentialGroup()
 								.addGap(7)
-								.addGroup(groupLayout.createParallelGroup(Alignment.TRAILING)
-										.addComponent(scrollPane, Alignment.LEADING, GroupLayout.DEFAULT_SIZE, 265,
-												Short.MAX_VALUE)
-										.addComponent(panel, Alignment.LEADING, GroupLayout.DEFAULT_SIZE, 265,
-												Short.MAX_VALUE))
+								.addGroup(groupLayout.createParallelGroup(Alignment.LEADING)
+										.addGroup(Alignment.TRAILING, groupLayout.createSequentialGroup()
+												.addComponent(scrollPane, GroupLayout.PREFERRED_SIZE, 224,
+														GroupLayout.PREFERRED_SIZE)
+												.addPreferredGap(ComponentPlacement.RELATED)
+												.addComponent(btnPopulateData, GroupLayout.PREFERRED_SIZE, 26,
+														GroupLayout.PREFERRED_SIZE))
+										.addComponent(panel, GroupLayout.DEFAULT_SIZE, 265, Short.MAX_VALUE))
 								.addContainerGap()));
 		GridBagLayout gbl_panel = new GridBagLayout();
 		gbl_panel.columnWidths = new int[] { 0, 0, 0 };
@@ -81,7 +106,7 @@ public class IfnmInspector {
 		gbc_lblProperName.gridy = 0;
 		panel.add(lblProperName, gbc_lblProperName);
 		
-		JLabel lblName = new JLabel("");
+		lblName = new JLabel("");
 		GridBagConstraints gbc_lblName = new GridBagConstraints();
 		gbc_lblName.anchor = GridBagConstraints.WEST;
 		gbc_lblName.insets = new Insets(0, 0, 5, 0);
@@ -97,7 +122,7 @@ public class IfnmInspector {
 		gbc_lblRegion.gridy = 1;
 		panel.add(lblRegion, gbc_lblRegion);
 		
-		JLabel lblNationregion = new JLabel("");
+		lblNationregion = new JLabel("");
 		GridBagConstraints gbc_lblNationregion = new GridBagConstraints();
 		gbc_lblNationregion.insets = new Insets(0, 0, 5, 0);
 		gbc_lblNationregion.anchor = GridBagConstraints.WEST;
@@ -113,7 +138,7 @@ public class IfnmInspector {
 		gbc_lblCategory.gridy = 2;
 		panel.add(lblCategory, gbc_lblCategory);
 		
-		JLabel lblNationcategory = new JLabel("");
+		lblNationcategory = new JLabel("");
 		GridBagConstraints gbc_lblNationcategory = new GridBagConstraints();
 		gbc_lblNationcategory.insets = new Insets(0, 0, 5, 0);
 		gbc_lblNationcategory.anchor = GridBagConstraints.WEST;
@@ -128,7 +153,7 @@ public class IfnmInspector {
 		gbc_lblEndorsements.gridy = 3;
 		panel.add(lblEndorsements, gbc_lblEndorsements);
 		
-		JLabel lblEndos = new JLabel("");
+		lblEndos = new JLabel("");
 		GridBagConstraints gbc_lblEndos = new GridBagConstraints();
 		gbc_lblEndos.anchor = GridBagConstraints.WEST;
 		gbc_lblEndos.gridx = 1;
@@ -139,27 +164,33 @@ public class IfnmInspector {
 		list.addListSelectionListener(new ListSelectionListener() {
 			@Override public void valueChanged(ListSelectionEvent e) {
 				IfnmNation data = list.getSelectedValuesList().get(0);
-				NSNation nation;
-				if (cachedData.get(data.getName()) == null) {
-					nation = new NSNation(data.getName());
-					try {
-						nation.populateData();
-						cachedData.put(data.getName(), nation);
-					} catch (IOException e1) {
-						JOptionPane.showMessageDialog(frame, "Cannot connect to NationStates.", "Error",
-								JOptionPane.PLAIN_MESSAGE, null);
-					}
-				} else {
-					nation = cachedData.get(data.getName());
-				}
-				lblName.setText(nation.getNationName());
-				lblNationregion.setText(nation.getRegion());
-				lblNationcategory.setText(nation.getCategory());
-				lblEndos.setText(String.valueOf(nation.getEndoCount()));
+				populateData(data);
 			}
 		});
 		
+		populateData(list.getModel().getElementAt(0));	// init element 0
+		
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+	}
+	
+	private void populateData(IfnmNation data) throws HeadlessException {
+		NSNation nation;
+		if (cachedData.get(data.getName()) == null) {
+			nation = new NSNation(data.getName());
+			try {
+				nation.populateData();
+				cachedData.put(data.getName(), nation);
+			} catch (IOException e1) {
+				JOptionPane.showMessageDialog(frame, "Cannot connect to NationStates.", "Error",
+						JOptionPane.PLAIN_MESSAGE, null);
+			}
+		} else {
+			nation = cachedData.get(data.getName());
+		}
+		lblName.setText(nation.getNationName());
+		lblNationregion.setText(nation.getRegion());
+		lblNationcategory.setText(nation.getCategory());
+		lblEndos.setText(String.valueOf(nation.getEndoCount()));
 	}
 }

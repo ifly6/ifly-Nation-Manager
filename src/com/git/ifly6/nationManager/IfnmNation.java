@@ -9,8 +9,8 @@ public class IfnmNation extends IflyPair<String, String> {
 	private static final long serialVersionUID = IflyNationManager.VERSION.major;
 	private boolean exists = true;
 	
-	public IfnmNation(String left, String right) {
-		super(left.trim().toLowerCase().replace(" ", "_"), right);
+	public IfnmNation(String nationReference, String passwordHash) {
+		super(nationReference.trim().toLowerCase().replace(" ", "_"), passwordHash);
 	}
 	
 	public String getName() {
@@ -21,7 +21,7 @@ public class IfnmNation extends IflyPair<String, String> {
 		return super.getRight();
 	}
 	
-	@Override public String toString() {
+	@Override public String toString() {	// override to allow for correct display
 		return this.getLeft() + (exists ? "" : "*");
 	}
 	

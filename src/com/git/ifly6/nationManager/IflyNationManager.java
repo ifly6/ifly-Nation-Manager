@@ -68,6 +68,7 @@ public class IflyNationManager {
 	private static Path PERSIST_PATH;
 	private static Path NATIONS_STORE;
 	private static Path HASH_STORE;
+	private static Path SALT_LOCATION;
 	
 	private JFrame frame;
 	private char[] password;
@@ -89,6 +90,7 @@ public class IflyNationManager {
 		
 		NATIONS_STORE = PERSIST_PATH.resolve("nations-store.txt");
 		HASH_STORE = PERSIST_PATH.resolve("hash-store");
+		SALT_LOCATION = PERSIST_PATH.resolve("salt-data");
 		
 		EventQueue.invokeLater(() -> {
 			try {
@@ -133,8 +135,7 @@ public class IflyNationManager {
 					saveSalt();
 				}
 			}
-			// hash the password
-			String passwordHash;
+			String passwordHash;	// hash the password
 			try {
 				passwordHash = new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
 			} catch (UnsupportedEncodingException | GeneralSecurityException e) {
@@ -153,7 +154,7 @@ public class IflyNationManager {
 					if (!storedHash.equals(passwordHash)) {
 						JOptionPane.showMessageDialog(frame, "Incorrect password.", "Error",
 								JOptionPane.PLAIN_MESSAGE, null);
-						System.exit(0);
+						return;
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -195,6 +196,7 @@ public class IflyNationManager {
 		list.setFont(new Font(Font.MONOSPACED, 0, 11));
 		
 		JButton btnAdd = new JButton("+");
+		btnAdd.setToolTipText("Add a new nation");
 		btnAdd.addActionListener(e -> {
 			IfnmPasswordDialog dialog = new IfnmPasswordDialog(password, salt);
 			IflyPair<String, String> pair = dialog.showDialog();
@@ -207,9 +209,8 @@ public class IflyNationManager {
 				
 				IfnmNation nation = new IfnmNation(pair.getLeft(), pair.getRight());
 				if (nationNames.contains(nation.getName())) {
-					JOptionPane.showMessageDialog(frame,
-							String.format("Nation \"%s\" is already in the list.%nRemove it first.", nation.getName()),
-							"Error", JOptionPane.PLAIN_MESSAGE, null);
+					JOptionPane.showMessageDialog(frame, "Nation \"" + nation.getName() + "\" is already in the "
+							+ "list.\nRemove it first.", "Error", JOptionPane.PLAIN_MESSAGE, null);
 					return;
 				}
 				
@@ -217,29 +218,30 @@ public class IflyNationManager {
 			}
 		});
 		
-		JButton btnRemove = new JButton("—");
-		btnRemove.addActionListener(ae -> IntStream.of(list.getSelectedIndices())
-				.mapToObj(listModel::getElementAt)
+		JButton btnRemove = new JButton("—");	// em-dash
+		btnRemove.setToolTipText("Remove selected nations");
+		btnRemove.addActionListener(ae -> list.getSelectedValuesList().stream()
 				.forEach(n -> listModel.removeElement(n)));
 		
 		JButton btnConnect = new JButton("Connect");
+		btnConnect.setToolTipText("Connect to selected nations");
 		btnConnect.addActionListener(new ActionListener() {
 			@Override public void actionPerformed(ActionEvent ae) {
-				List<IfnmNation> nations = IntStream.of(list.getSelectedIndices())
-						.mapToObj(listModel::getElementAt).collect(Collectors.toList());
 				EventQueue.invokeLater(() -> {
 					IfnmConnectWindow progressDialog = new IfnmConnectWindow();
-					progressDialog.showDialog(nations, password, salt);
+					progressDialog.showDialog(list.getSelectedValuesList(), password, salt);
 				});
 			}
 		});
 		
 		JButton btnShow = new JButton("Show");
+		btnShow.setToolTipText(
+				"Show selected nations in your browser. Only opens nations which are not marked with an (*), and therefore, "
+						+ "have a good chance of existing.");
 		btnShow.addActionListener(ae -> {
 			Desktop desktop = Desktop.getDesktop();
-			IntStream.of(list.getSelectedIndices())
-					.mapToObj(listModel::getElementAt)
-					.filter(n -> n.exists())
+			list.getSelectedValuesList().stream()
+					.filter(IfnmNation::exists)
 					.map(IfnmNation::getLeft)
 					.forEach(n -> {
 						try {
@@ -253,6 +255,7 @@ public class IflyNationManager {
 		JScrollPane scrollPane = new JScrollPane(list);
 		
 		JButton btnInspector = new JButton("i");
+		btnInspector.setToolTipText("Open inspector for at-a-glance details about selected nations");
 		btnInspector.addActionListener(new ActionListener() {
 			@Override public void actionPerformed(ActionEvent e) {
 				List<IfnmNation> items = IntStream.of(list.getSelectedIndices())
@@ -414,7 +417,7 @@ public class IflyNationManager {
 			String pass = new String(passwordField.getPassword());
 			if (!IflyStrings.isEmpty(pass)) { return passwordField.getPassword(); }
 		}
-		return "ifnmDefaultPassword".toCharArray();
+		return "ifnmDefaultPassword".toCharArray();	// return a default password
 	}
 	
 	private void autosave() {
@@ -450,7 +453,7 @@ public class IflyNationManager {
 	
 	private void saveSalt() {
 		try {
-			OutputStream os = Files.newOutputStream(PERSIST_PATH.resolve("salt-data"));
+			OutputStream os = Files.newOutputStream(SALT_LOCATION);
 			ObjectOutputStream oos = new ObjectOutputStream(os);
 			oos.writeObject(salt);
 		} catch (IOException e) {
@@ -460,7 +463,7 @@ public class IflyNationManager {
 	}
 	
 	private byte[] loadSalt() throws IOException, ClassNotFoundException {
-		InputStream is = Files.newInputStream(PERSIST_PATH.resolve("salt-data"));
+		InputStream is = Files.newInputStream(SALT_LOCATION);
 		ObjectInputStream ois = new ObjectInputStream(is);
 		return (byte[]) ois.readObject();
 	}

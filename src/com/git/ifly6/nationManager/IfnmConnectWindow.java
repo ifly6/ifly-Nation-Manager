@@ -32,6 +32,7 @@ public class IfnmConnectWindow extends JFrame {
 	private final JPanel contentPanel = new JPanel();
 	private JTextArea textArea;
 	private JProgressBar progressBar;
+	private JButton btnOk;
 	
 	/** Create the dialog. */
 	public IfnmConnectWindow() {
@@ -55,7 +56,7 @@ public class IfnmConnectWindow extends JFrame {
 		
 		JScrollPane scrollPane = new JScrollPane(textArea);
 		
-		JButton btnOk = new JButton("Ok");
+		btnOk = new JButton("Ok");
 		btnOk.addActionListener((ae) -> {
 			setVisible(false);
 			dispose();
@@ -94,6 +95,8 @@ public class IfnmConnectWindow extends JFrame {
 		new Thread(new Runnable() {
 			@Override public void run() {
 				setVisible(true);
+				
+				btnOk.setEnabled(false);
 				for (int i = 0; i < nations.size(); i++) {
 					
 					IfnmNation nation = nations.get(i);
@@ -113,7 +116,6 @@ public class IfnmConnectWindow extends JFrame {
 					} catch (FileNotFoundException e) {
 						appendText("ERROR: \"" + nation.getName() + "\" does not exist.");
 						nation.setExists(false);
-						continue;
 						
 					} catch (GeneralSecurityException | IOException e) {
 						appendText("ERROR: Cannot connect to NationStates.");
@@ -122,6 +124,7 @@ public class IfnmConnectWindow extends JFrame {
 					
 					setProgress(i + 1, nations.size());
 				}
+				btnOk.setEnabled(true);
 			}
 		}).start();
 	}
