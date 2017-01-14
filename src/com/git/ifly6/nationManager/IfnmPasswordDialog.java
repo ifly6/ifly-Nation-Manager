@@ -119,12 +119,17 @@ public class IfnmPasswordDialog extends JDialog {
 	
 	private String encrypt(String data) {
 		try {
-			IfnmCipher cipher = new IfnmCipher(password, salt);
-			return cipher.encrypt(data);
+			return encrypt(data, password, salt);
 		} catch (UnsupportedEncodingException | GeneralSecurityException e) {
 			JOptionPane.showMessageDialog(this, "Cannot encrypt password", "Error", JOptionPane.PLAIN_MESSAGE, null);
 			e.printStackTrace();
 			return "";	// return nothing
 		}
+	}
+	
+	public static String encrypt(String data, char[] password, byte[] salt)
+			throws UnsupportedEncodingException, GeneralSecurityException {
+		IfnmCipher cipher = new IfnmCipher(password, salt);
+		return cipher.encrypt(data);
 	}
 }

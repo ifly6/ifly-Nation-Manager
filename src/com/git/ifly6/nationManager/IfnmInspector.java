@@ -43,7 +43,7 @@ public class IfnmInspector {
 		
 		frame = new JFrame("Inspector");
 		frame.setBounds(100, 100, 500, 300);
-		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		
 		DefaultListModel<IfnmNation> tableModel = new DefaultListModel<>();
 		items.stream().forEach(tableModel::addElement);
@@ -54,7 +54,7 @@ public class IfnmInspector {
 		JScrollPane scrollPane = new JScrollPane(list);
 		
 		JPanel panel = new JPanel();
-		panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 		
 		JButton btnPopulateData = new JButton("Populate Data");
 		btnPopulateData.addActionListener((ae) -> {
@@ -71,21 +71,19 @@ public class IfnmInspector {
 						.addGroup(groupLayout.createSequentialGroup()
 								.addContainerGap()
 								.addGroup(groupLayout.createParallelGroup(Alignment.LEADING)
-										.addComponent(btnPopulateData, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE,
-												Short.MAX_VALUE)
+										.addComponent(btnPopulateData, GroupLayout.DEFAULT_SIZE, 171, Short.MAX_VALUE)
 										.addComponent(scrollPane, GroupLayout.PREFERRED_SIZE, 171,
 												GroupLayout.PREFERRED_SIZE))
 								.addPreferredGap(ComponentPlacement.RELATED)
 								.addComponent(panel, GroupLayout.DEFAULT_SIZE, 311, Short.MAX_VALUE)
 								.addContainerGap()));
 		groupLayout.setVerticalGroup(
-				groupLayout.createParallelGroup(Alignment.TRAILING)
-						.addGroup(Alignment.LEADING, groupLayout.createSequentialGroup()
-								.addGap(7)
-								.addGroup(groupLayout.createParallelGroup(Alignment.LEADING)
-										.addGroup(Alignment.TRAILING, groupLayout.createSequentialGroup()
-												.addComponent(scrollPane, GroupLayout.PREFERRED_SIZE, 224,
-														GroupLayout.PREFERRED_SIZE)
+				groupLayout.createParallelGroup(Alignment.LEADING)
+						.addGroup(groupLayout.createSequentialGroup()
+								.addContainerGap()
+								.addGroup(groupLayout.createParallelGroup(Alignment.TRAILING)
+										.addGroup(groupLayout.createSequentialGroup()
+												.addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 234, Short.MAX_VALUE)
 												.addPreferredGap(ComponentPlacement.RELATED)
 												.addComponent(btnPopulateData, GroupLayout.PREFERRED_SIZE, 26,
 														GroupLayout.PREFERRED_SIZE))

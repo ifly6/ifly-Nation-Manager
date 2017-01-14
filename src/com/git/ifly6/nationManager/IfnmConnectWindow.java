@@ -125,6 +125,7 @@ public class IfnmConnectWindow extends JFrame {
 					setProgress(i + 1, nations.size());
 				}
 				btnOk.setEnabled(true);
+				
 			}
 		}).start();
 	}

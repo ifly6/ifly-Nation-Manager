@@ -50,6 +50,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
 import javax.swing.LayoutStyle.ComponentPlacement;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import com.git.ifly6.iflyLibrary.IflyDialogs;
 import com.git.ifly6.iflyLibrary.IflyStrings;
@@ -77,6 +79,18 @@ public class IflyNationManager {
 	
 	/** Launch the application. */
 	public static void main(String[] args) {
+		
+		if (IflySystem.IS_OS_MAC) {	// Mac look-and-feel
+			System.setProperty("apple.laf.useScreenMenuBar", "true");
+			System.setProperty("com.apple.mrj.application.apple.menu.about.name", "ifly Nation Manager");
+		}
+		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+				| UnsupportedLookAndFeelException e) {
+			e.printStackTrace();
+		}
 		
 		if (IflySystem.IS_OS_MAC) {
 			PERSIST_PATH =
@@ -125,36 +139,34 @@ public class IflyNationManager {
 		
 		{	// Load cryptographic information
 			password = passwordPrompt();
-			if (salt == null) {
-				try {
-					salt = loadSalt();
-					
-				} catch (Exception e) {
-					salt = new byte[8];
-					new SecureRandom().nextBytes(salt);
-					saveSalt();
-				}
-			}
-			String passwordHash;	// hash the password
 			try {
-				passwordHash = new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
+				salt = loadSalt();
+				
+			} catch (Exception e) {
+				salt = new byte[8];
+				new SecureRandom().nextBytes(salt);
+				saveSalt();
+			}
+			String persistHash;	// hash the password
+			try {
+				persistHash = new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
 			} catch (UnsupportedEncodingException | GeneralSecurityException e) {
-				passwordHash = "";
+				persistHash = "";
 				e.printStackTrace();
 			}
 			if (!Files.exists(HASH_STORE)) {	// save hash
 				try {
-					Files.write(HASH_STORE, passwordHash.getBytes());
+					Files.write(HASH_STORE, persistHash.getBytes());
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			} else {
 				try {
 					String storedHash = Files.readAllLines(HASH_STORE).get(0);
-					if (!storedHash.equals(passwordHash)) {
+					if (!storedHash.equals(persistHash)) {
 						JOptionPane.showMessageDialog(frame, "Incorrect password.", "Error",
 								JOptionPane.PLAIN_MESSAGE, null);
-						return;
+						return;	// straight exit
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -202,13 +214,15 @@ public class IflyNationManager {
 			IflyPair<String, String> pair = dialog.showDialog();
 			if (!IflyStrings.isEmpty(pair.getLeft()) && !IflyStrings.isEmpty(pair.getRight())) {
 				
-				List<String> nationNames = new ArrayList<>();
+				boolean duplicate = false;
 				for (int i = 0; i < listModel.getSize(); i++) {
-					nationNames.add(listModel.getElementAt(i).getName());
+					if (listModel.getElementAt(i).getName().equals(pair.getLeft())) {
+						duplicate = true;
+					}
 				}
 				
 				IfnmNation nation = new IfnmNation(pair.getLeft(), pair.getRight());
-				if (nationNames.contains(nation.getName())) {
+				if (duplicate) {
 					JOptionPane.showMessageDialog(frame, "Nation \"" + nation.getName() + "\" is already in the "
 							+ "list.\nRemove it first.", "Error", JOptionPane.PLAIN_MESSAGE, null);
 					return;
@@ -261,7 +275,9 @@ public class IflyNationManager {
 				List<IfnmNation> items = IntStream.of(list.getSelectedIndices())
 						.mapToObj(listModel::getElementAt)
 						.filter(n -> n.exists()).collect(Collectors.toList());
-				new IfnmInspector(items);
+				if (!items.isEmpty()) {
+					new IfnmInspector(items);
+				}
 			}
 		});
 		
@@ -316,6 +332,7 @@ public class IflyNationManager {
 		mnFile.add(mntmSave);
 		
 		JMenuItem mntmLoad = new JMenuItem("Load");
+		mntmLoad.setToolTipText("Imported files must have been generated with the same salt and password as this session");
 		mntmLoad.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 		mntmLoad.addActionListener((ae) -> {
 			
@@ -327,7 +344,7 @@ public class IflyNationManager {
 			}
 			
 			JFileChooser fileChooser = new JFileChooser();
-			fileChooser.setDialogTitle("Choose applicable JSON file...");
+			fileChooser.setDialogTitle("Choose salt-compatible JSON file...");
 			fileChooser.setCurrentDirectory(PERSIST_PATH.toFile());
 			fileChooser.showOpenDialog(frame);
 			Path savedFile = fileChooser.getSelectedFile().toPath();
@@ -340,6 +357,41 @@ public class IflyNationManager {
 		
 		JSeparator separator = new JSeparator();
 		mnFile.add(separator);
+		
+		JMenuItem mntmImport = new JMenuItem("Import From CSV");
+		mntmImport.setToolTipText("CSV should be in form 'nation,password' on individual lines");
+		mntmImport.addActionListener((ae) -> {
+			
+			JFileChooser fileChooser = new JFileChooser();
+			fileChooser.setDialogTitle("Choose applicable CSV file...");
+			fileChooser.setCurrentDirectory(PERSIST_PATH.toFile());
+			fileChooser.showOpenDialog(frame);
+			Path savedFile = fileChooser.getSelectedFile().toPath();
+			
+			try {
+				List<String> lines = Files.readAllLines(savedFile);
+				for (String element : lines) {
+					String[] sides = element.split(",");
+					try {
+						IfnmNation nation = new IfnmNation(sides[0], IfnmPasswordDialog.encrypt(sides[1], password, salt));
+						listModel.addElement(nation);
+					} catch (IndexOutOfBoundsException e) {
+						System.err.println("Error. Cannot process line: " + element);
+						continue;
+					} catch (GeneralSecurityException e) {
+						throw new IOException();
+					}
+				}
+				
+			} catch (IOException e1) {
+				IflyDialogs.showMessageDialog(frame, "Cannot import from CSV.", "Error");
+			}
+			
+		});
+		mnFile.add(mntmImport);
+		
+		JSeparator separator_1 = new JSeparator();
+		mnFile.add(separator_1);
 		
 		JMenuItem mntmOpenFolder = new JMenuItem("Open Folder");
 		mntmOpenFolder.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
