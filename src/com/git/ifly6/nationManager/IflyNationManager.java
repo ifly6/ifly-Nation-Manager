@@ -5,6 +5,7 @@ import java.awt.Desktop;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.HeadlessException;
 import java.awt.Toolkit;
@@ -27,9 +28,12 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
@@ -53,11 +57,20 @@ import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import com.git.ifly6.iflyLibrary.IflyDialogs;
 import com.git.ifly6.iflyLibrary.IflyStrings;
 import com.git.ifly6.iflyLibrary.IflySystem;
 import com.git.ifly6.iflyLibrary.IflyVersion;
 import com.git.ifly6.iflyLibrary.generics.IflyPair;
+import com.git.ifly6.nsapi.NSConnection;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -72,59 +85,151 @@ public class IflyNationManager {
 	private static Path HASH_STORE;
 	private static Path SALT_LOCATION;
 	
+	private static char[] password;
+	private static byte[] salt;
+	
 	private JFrame frame;
-	private char[] password;
-	private byte[] salt;
 	private JList<IfnmNation> list;
 	
-	/** Launch the application. */
 	public static void main(String[] args) {
 		
-		if (IflySystem.IS_OS_MAC) {	// Mac look-and-feel
-			System.setProperty("apple.laf.useScreenMenuBar", "true");
-			System.setProperty("com.apple.mrj.application.apple.menu.about.name", "ifly Nation Manager");
-		}
-		
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
-				| UnsupportedLookAndFeelException e) {
-			e.printStackTrace();
-		}
-		
-		if (IflySystem.IS_OS_MAC) {
-			PERSIST_PATH =
-					Paths.get(System.getProperty("user.home"), "Library", "Application Support", "ifly Nation Manager");
-			System.setProperty("apple.laf.useScreenMenuBar", "true");
-			System.setProperty("com.apple.mrj.application.apple.menu.about.name",
-					"Ifly Nation Manager " + IflyNationManager.VERSION.toString());
-		} else {
-			PERSIST_PATH = Paths.get(System.getProperty("user.dir"), "config");
-		}
-		
-		NATIONS_STORE = PERSIST_PATH.resolve("nations-store.txt");
-		HASH_STORE = PERSIST_PATH.resolve("hash-store");
-		SALT_LOCATION = PERSIST_PATH.resolve("salt-data");
-		
-		EventQueue.invokeLater(() -> {
+		if (GraphicsEnvironment.isHeadless()) {
+			
+			Options options = new Options();
+			
+			Option passwordOption = new Option("p", "password", true, "Specifies password");
+			passwordOption.setRequired(true);
+			options.addOption(passwordOption);
+			
+			Option addOption = new Option("a", "Adds new nation");
+			addOption.setLongOpt("add");
+			addOption.setArgs(2);
+			options.addOption(addOption);
+			
+			Option removeOption = new Option("r", "remove", false, "remove nation");
+			options.addOption(removeOption);
+			
+			Option listOption = new Option("l", "list", false, "list loaded nations");
+			options.addOption(listOption);
+			
+			Option connectOption = new Option("c", "connect", false, "connect to NationStates");
+			options.addOption(connectOption);
+			
+			CommandLineParser parser = new DefaultParser();
+			HelpFormatter formatter = new HelpFormatter();
+			
 			try {
-				IflyNationManager window = new IflyNationManager();
-				window.frame.setVisible(true);
-			} catch (Exception e) {
+				
+				CommandLine cLine = parser.parse(options, args);
+				
+				// require password, then verify
+				password = cLine.getOptionValue(passwordOption.getOpt()).toCharArray();
+				salt = getSalt();
+				if (!verifyHash(createHash(password))) { return; }
+				
+				if (cLine.hasOption(addOption.getOpt())) {
+					
+					String[] addArgs = cLine.getOptionValues(addOption.getOpt());
+					String nation = addArgs[0];
+					String nationPass = addArgs[1];
+					
+					IfnmNation newNation = new IfnmNation(nation,
+							IfnmConnectWindow.getNationPassword(new IfnmCipher(password, salt), nationPass));
+					List<IfnmNation> nations = loadData(NATIONS_STORE).getNations();
+					boolean match = nations.stream().map(IfnmNation::getName).anyMatch(s -> s.equals(newNation.getName()));
+					if (!match) {
+						nations.add(newNation);
+					}
+					saveData(new IfnmData(nations), NATIONS_STORE);
+				}
+				if (cLine.hasOption(removeOption.getOpt())) {
+					String refRemove = cLine.getOptionValue(removeOption.getOpt()).trim().toLowerCase().replace(" ", "_");
+					List<IfnmNation> nations = loadData(NATIONS_STORE).getNations();
+					for (IfnmNation nation : nations) {
+						if (nation.getName().equals(refRemove)) {
+							nations.remove(nation);
+						}
+					}
+					saveData(new IfnmData(nations), NATIONS_STORE);
+				}
+				if (cLine.hasOption(listOption.getOpt())) {
+					IfnmData data = loadData(NATIONS_STORE);
+					data.getNations().stream().forEach(System.out::println);
+				}
+				if (cLine.hasOption(connectOption.getOpt())) {
+					IfnmData data = loadData(NATIONS_STORE);
+					for (IfnmNation nation : data.getNations()) {
+						try {
+							NSConnection connection = new NSConnection(IfnmConnectWindow.createApiQuery(nation.getName()));
+							Map<String, String> entries = new HashMap<>();
+							entries.put("Password", new IfnmCipher(password, salt).decrypt(nation.getPassword()));
+							connection.setHeaders(entries);
+							connection.connect();
+						} catch (GeneralSecurityException | IOException e) {
+							e.printStackTrace();
+							continue;
+						}
+					}
+				}
+				
+			} catch (ParseException e) {
+				
+				String opts = Stream.of(args).collect(Collectors.joining(" "));
+				System.err.println("Cannot parse options: " + opts);
+				e.printStackTrace();
+				
+				System.out.println();
+				formatter.printHelp("java -jar IflyNationManager.jar", options);
+				
+			}
+			
+		} else {	// not headless, launch GUI
+			
+			if (IflySystem.IS_OS_MAC) {	// Mac look-and-feel
+				System.setProperty("apple.laf.useScreenMenuBar", "true");
+				System.setProperty("com.apple.mrj.application.apple.menu.about.name", "ifly Nation Manager");
+			}
+			
+			try {
+				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+					| UnsupportedLookAndFeelException e) {
 				e.printStackTrace();
 			}
-		});
+			
+			if (IflySystem.IS_OS_MAC) {
+				PERSIST_PATH =
+						Paths.get(System.getProperty("user.home"), "Library", "Application Support", "ifly Nation Manager");
+				System.setProperty("apple.laf.useScreenMenuBar", "true");
+				System.setProperty("com.apple.mrj.application.apple.menu.about.name",
+						"Ifly Nation Manager " + IflyNationManager.VERSION.toString());
+			} else {
+				PERSIST_PATH = Paths.get(System.getProperty("user.dir"), "config");
+			}
+			
+			NATIONS_STORE = PERSIST_PATH.resolve("nations-store.txt");
+			HASH_STORE = PERSIST_PATH.resolve("hash-store");
+			SALT_LOCATION = PERSIST_PATH.resolve("salt-data");
+			
+			try {
+				Files.createDirectories(PERSIST_PATH);
+			} catch (IOException e) { // nothing
+			}
+			
+			EventQueue.invokeLater(() -> {
+				try {
+					IflyNationManager window = new IflyNationManager();
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			});
+		}
 	}
 	
 	/** Create the application.
 	 * @wbp.parser.entryPoint */
 	public IflyNationManager() {
-		
-		try {
-			Files.createDirectories(PERSIST_PATH);
-		} catch (IOException e) { // nothing
-		}
-		
 		initialise();
 	}
 	
@@ -138,39 +243,14 @@ public class IflyNationManager {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		{	// Load cryptographic information
+			salt = getSalt();
 			password = passwordPrompt();
-			try {
-				salt = loadSalt();
-				
-			} catch (Exception e) {
-				salt = new byte[8];
-				new SecureRandom().nextBytes(salt);
-				saveSalt();
-			}
-			String persistHash;	// hash the password
-			try {
-				persistHash = new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
-			} catch (UnsupportedEncodingException | GeneralSecurityException e) {
-				persistHash = "";
-				e.printStackTrace();
-			}
-			if (!Files.exists(HASH_STORE)) {	// save hash
-				try {
-					Files.write(HASH_STORE, persistHash.getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			} else {
-				try {
-					String storedHash = Files.readAllLines(HASH_STORE).get(0);
-					if (!storedHash.equals(persistHash)) {
-						JOptionPane.showMessageDialog(frame, "Incorrect password.", "Error",
-								JOptionPane.PLAIN_MESSAGE, null);
-						return;	// straight exit
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+			String persistHash = createHash(password);
+			
+			if (!verifyHash(persistHash)) {
+				JOptionPane.showMessageDialog(frame, "Incorrect password.", "Error",
+						JOptionPane.PLAIN_MESSAGE, null);
+				return;	// straight exit
 			}
 		}
 		
@@ -277,6 +357,8 @@ public class IflyNationManager {
 						.filter(n -> n.exists()).collect(Collectors.toList());
 				if (!items.isEmpty()) {
 					new IfnmInspector(items);
+				} else {
+					IflyDialogs.showMessageDialog(frame, "No living nations selected.", "Message");
 				}
 			}
 		});
@@ -480,44 +562,74 @@ public class IflyNationManager {
 		saveData(new IfnmData(nations), NATIONS_STORE);
 	}
 	
-	private void saveData(IfnmData data, Path dataFile) {
+	private static void saveData(IfnmData data, Path dataFile) {
 		try {
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			String json = gson.toJson(data);
 			Files.write(dataFile, Arrays.asList(json));
 			
 		} catch (JsonIOException | IOException e) {
-			IflyDialogs.showMessageDialog(this.frame, "Cannot save data.", "Error");
 			e.printStackTrace();
 		}
 	}
 	
-	private IfnmData loadData(Path dataFile) {
-		Gson gson = new Gson();
+	private static IfnmData loadData(Path dataFile) {
 		try {
+			Gson gson = new Gson();
 			return gson.fromJson(Files.newBufferedReader(dataFile), IfnmData.class);
 		} catch (JsonSyntaxException | JsonIOException | IOException e) {
-			IflyDialogs.showMessageDialog(this.frame, "Cannot load data.", "Error");
 			e.printStackTrace();
 			return new IfnmData(new ArrayList<IfnmNation>());
 		}
 	}
 	
-	private void saveSalt() {
+	private static byte[] createSalt() {
+		byte[] newSalt = new byte[8];
+		new SecureRandom().nextBytes(newSalt);
+		return newSalt;
+	}
+	
+	private static byte[] getSalt() {
 		try {
-			OutputStream os = Files.newOutputStream(SALT_LOCATION);
-			ObjectOutputStream oos = new ObjectOutputStream(os);
-			oos.writeObject(salt);
-		} catch (IOException e) {
-			IflyDialogs.showMessageDialog(frame, "Cannot save cryptographic information.", "Error");
-			e.printStackTrace();
+			InputStream is = Files.newInputStream(SALT_LOCATION);
+			ObjectInputStream ois = new ObjectInputStream(is);
+			return (byte[]) ois.readObject();
+		} catch (IOException | ClassNotFoundException e) {
+			byte[] newSalt = createSalt();
+			try {
+				OutputStream os = Files.newOutputStream(SALT_LOCATION);
+				ObjectOutputStream oos = new ObjectOutputStream(os);
+				oos.writeObject(newSalt);
+			} catch (IOException e1) {}	// pass
+			return newSalt;
 		}
 	}
 	
-	private byte[] loadSalt() throws IOException, ClassNotFoundException {
-		InputStream is = Files.newInputStream(SALT_LOCATION);
-		ObjectInputStream ois = new ObjectInputStream(is);
-		return (byte[]) ois.readObject();
+	/** @param persistHash
+	 * @return */
+	private static boolean verifyHash(String persistHash) {
+		try {
+			if (!Files.exists(HASH_STORE)) {	// if it doesn't exist, save hash
+				Files.write(HASH_STORE, persistHash.getBytes());
+				return true;
+			}
+			String storedHash = Files.readAllLines(HASH_STORE).get(0);
+			if (!storedHash.equals(persistHash)) { return true; }
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
 	
+	/** @param passString
+	 * @return hashed version of the key defined in {@link IfnmCipher.PERSIST} based on provided salt and password. */
+	private static String createHash(char[] passString) {
+		try {
+			return new IfnmCipher(password, salt).encrypt(IfnmCipher.PERSIST);
+		} catch (UnsupportedEncodingException | GeneralSecurityException e) {
+			e.printStackTrace();
+			return "";
+		}
+	}
 }

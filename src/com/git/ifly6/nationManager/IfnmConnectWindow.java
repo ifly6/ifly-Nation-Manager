@@ -103,10 +103,9 @@ public class IfnmConnectWindow extends JFrame {
 					String name = nation.getLeft();
 					String encryptedPass = nation.getRight();
 					try {
-						NSConnection connection =
-								new NSConnection(NSConnection.API_PREFIX + "nation=" + name + "&q=unread");
+						NSConnection connection = new NSConnection(createApiQuery(name));
 						Map<String, String> entries = new HashMap<>();
-						entries.put("Password", new IfnmCipher(password, salt).decrypt(encryptedPass));
+						entries.put("Password", getNationPassword(new IfnmCipher(password, salt), encryptedPass));
 						connection.setHeaders(entries);
 						connection.connect();
 						
@@ -117,7 +116,7 @@ public class IfnmConnectWindow extends JFrame {
 						appendText("ERROR: \"" + nation.getName() + "\" does not exist.");
 						nation.setExists(false);
 						
-					} catch (GeneralSecurityException | IOException e) {
+					} catch (IOException e) {
 						appendText("ERROR: Cannot connect to NationStates.");
 						e.printStackTrace();
 					}
@@ -128,6 +127,18 @@ public class IfnmConnectWindow extends JFrame {
 				
 			}
 		}).start();
+	}
+	
+	static String createApiQuery(String name) {
+		return NSConnection.API_PREFIX + "nation=" + name + "&q=unread";
+	}
+	
+	static String getNationPassword(IfnmCipher cipher, String encryptedPass) {
+		try {
+			return cipher.decrypt(encryptedPass);
+		} catch (GeneralSecurityException | IOException e) {
+			return encryptedPass;
+		}
 	}
 	
 	public IfnmConnectWindow appendText(String input) {
@@ -150,4 +161,5 @@ public class IfnmConnectWindow extends JFrame {
 		setProgress(n, progressBar.getMaximum());
 		return this;
 	}
+	
 }

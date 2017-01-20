@@ -21,6 +21,10 @@ public class IfnmNation extends IflyPair<String, String> {
 		return super.getRight();
 	}
 	
+	public boolean sameNameAs(IfnmNation nation) {
+		return nation.getName().equals(this.getName());
+	}
+	
 	@Override public String toString() {	// override to allow for correct display
 		return this.getLeft() + (exists ? "" : "*");
 	}
