@@ -1,7 +1,7 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
-import com.ifly6.iflyLibrary.generics.IflyPair;
+import com.git.ifly6.iflyLibrary.generics.IflyPair;
 
 /**
  * The <code>IfnmNation</code> class holds a nation reference name (automatically formatted)

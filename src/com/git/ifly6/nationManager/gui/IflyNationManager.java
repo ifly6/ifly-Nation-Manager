@@ -1,16 +1,16 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
+import com.git.ifly6.iflyLibrary.IflyDialogs;
+import com.git.ifly6.iflyLibrary.IflyStrings;
+import com.git.ifly6.iflyLibrary.IflySystem;
+import com.git.ifly6.iflyLibrary.IflyVersion;
+import com.git.ifly6.iflyLibrary.generics.IflyPair;
 import com.git.ifly6.nationManager.IfnmAuthenticator;
 import com.git.ifly6.nationManager.IfnmCoder;
 import com.git.ifly6.nationManager.IfnmReader;
 import com.git.ifly6.nationManager.IfnmWriter;
 import com.git.ifly6.nsapi.NSConnection;
-import com.ifly6.iflyLibrary.IflyDialogs;
-import com.ifly6.iflyLibrary.IflyStrings;
-import com.ifly6.iflyLibrary.IflySystem;
-import com.ifly6.iflyLibrary.IflyVersion;
-import com.ifly6.iflyLibrary.generics.IflyPair;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;

@@ -1,8 +1,8 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
+import com.git.ifly6.iflyLibrary.generics.IflyPair;
 import com.git.ifly6.nationManager.IfnmCoder;
-import com.ifly6.iflyLibrary.generics.IflyPair;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
