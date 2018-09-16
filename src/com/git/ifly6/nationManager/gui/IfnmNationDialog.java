@@ -1,12 +1,8 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
-package com.git.ifly6.nationManager;
+package com.git.ifly6.nationManager.gui;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Toolkit;
-import java.io.UnsupportedEncodingException;
-import java.security.GeneralSecurityException;
+import com.git.ifly6.nationManager.IfnmCoder;
+import com.ifly6.iflyLibrary.generics.IflyPair;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -14,33 +10,31 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.border.EmptyBorder;
-
-import com.git.ifly6.iflyLibrary.generics.IflyPair;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Toolkit;
 
 /** @author ifly6 */
-public class IfnmPasswordDialog extends JDialog {
+public class IfnmNationDialog extends JDialog {
 	
 	private static final long serialVersionUID = IflyNationManager.VERSION.major;
-	
-	private final JPanel contentPanel = new JPanel();
+
 	private JTextField txtUsername;
 	private JPasswordField passwordField;
-	
-	private char[] password;
-	private byte[] salt;
-	
+
+	private IfnmCoder coder;
+
 	/** Create the dialog. */
-	public IfnmPasswordDialog(char[] password, byte[] salt) {
-		
-		this.password = password;
-		this.salt = salt;
-		
+	public IfnmNationDialog(IfnmCoder coder) {
+
+		this.coder = coder;
+
 		Dimension screenDimensions = Toolkit.getDefaultToolkit().getScreenSize();
 		double sWidth = screenDimensions.getWidth();
 		double sHeight = screenDimensions.getHeight();
@@ -48,12 +42,13 @@ public class IfnmPasswordDialog extends JDialog {
 		int windowHeight = 150;
 		setBounds((int) (sWidth / 2 - windowWidth / 2), (int) (sHeight / 2 - windowHeight / 2), windowWidth,
 				windowHeight);
-		setMaximumSize(new Dimension(windowHeight, windowHeight));
+		setMaximumSize(new Dimension(windowWidth, windowHeight));
 		setMinimumSize(new Dimension(windowWidth, windowHeight));
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setModalityType(ModalityType.APPLICATION_MODAL);
 		
 		getContentPane().setLayout(new BorderLayout());
+		JPanel contentPanel = new JPanel();
 		contentPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 		getContentPane().add(contentPanel, BorderLayout.CENTER);
 		
@@ -114,22 +109,7 @@ public class IfnmPasswordDialog extends JDialog {
 	
 	public IflyPair<String, String> showDialog() {
 		setVisible(true);
-		return new IflyPair<>(txtUsername.getText(), encrypt(new String(passwordField.getPassword())));
+		return new IflyPair<>(txtUsername.getText(), coder.encrypt(new String(passwordField.getPassword())));
 	}
-	
-	private String encrypt(String data) {
-		try {
-			return encrypt(data, password, salt);
-		} catch (UnsupportedEncodingException | GeneralSecurityException e) {
-			JOptionPane.showMessageDialog(this, "Cannot encrypt password", "Error", JOptionPane.PLAIN_MESSAGE, null);
-			e.printStackTrace();
-			return "";	// return nothing
-		}
-	}
-	
-	public static String encrypt(String data, char[] password, byte[] salt)
-			throws UnsupportedEncodingException, GeneralSecurityException {
-		IfnmCipher cipher = new IfnmCipher(password, salt);
-		return cipher.encrypt(data);
-	}
+
 }

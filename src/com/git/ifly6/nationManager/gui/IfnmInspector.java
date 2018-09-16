@@ -1,13 +1,7 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
-package com.git.ifly6.nationManager;
+package com.git.ifly6.nationManager.gui;
 
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.HeadlessException;
-import java.awt.Insets;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
+import com.git.ifly6.nsapi.NSNation;
 
 import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
@@ -16,20 +10,20 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-
-import com.git.ifly6.nsapi.NSNation;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.util.HashMap;
+import java.util.List;
 
 /** @author ifly6 */
 public class IfnmInspector {
-	
+
 	static HashMap<String, NSNation> cachedData = new HashMap<>();	// keep data between instances
 	
 	private JFrame frame;
@@ -46,7 +40,7 @@ public class IfnmInspector {
 		frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		
 		DefaultListModel<IfnmNation> tableModel = new DefaultListModel<>();
-		items.stream().forEach(tableModel::addElement);
+        items.forEach(tableModel::addElement);
 		
 		JList<IfnmNation> list = new JList<>(tableModel);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -158,37 +152,33 @@ public class IfnmInspector {
 		gbc_lblEndos.gridy = 3;
 		panel.add(lblEndos, gbc_lblEndos);
 		frame.getContentPane().setLayout(groupLayout);
-		
-		list.addListSelectionListener(new ListSelectionListener() {
-			@Override public void valueChanged(ListSelectionEvent e) {
-				IfnmNation data = list.getSelectedValuesList().get(0);
-				populateData(data);
-			}
-		});
+
+        list.addListSelectionListener(e -> {
+            IfnmNation data = list.getSelectedValuesList().get(0);
+            populateData(data);
+        });
 		
 		populateData(list.getModel().getElementAt(0));	// init element 0
 		
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
-	
-	private void populateData(IfnmNation data) throws HeadlessException {
+
+    private void populateData(IfnmNation data) {
+
 		NSNation nation;
 		if (cachedData.get(data.getName()) == null) {
 			nation = new NSNation(data.getName());
-			try {
-				nation.populateData();
-				cachedData.put(data.getName(), nation);
-			} catch (IOException e1) {
-				JOptionPane.showMessageDialog(frame, "Cannot connect to NationStates.", "Error",
-						JOptionPane.PLAIN_MESSAGE, null);
-			}
+            nation.populateData();
+            cachedData.put(data.getName(), nation);
 		} else {
 			nation = cachedData.get(data.getName());
 		}
-		lblName.setText(nation.getNationName());
+
+        lblName.setText(nation.getNationName());
 		lblNationregion.setText(nation.getRegion());
 		lblNationcategory.setText(nation.getCategory());
 		lblEndos.setText(String.valueOf(nation.getEndoCount()));
-	}
+
+    }
 }
