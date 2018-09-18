@@ -1,6 +1,7 @@
 /* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
+import com.git.ifly6.javatelegram.JTelegramException;
 import com.git.ifly6.nationManager.IfnmCoder;
 import com.git.ifly6.nsapi.NSConnection;
 import com.git.ifly6.nsapi.NSException;
@@ -116,8 +117,12 @@ public class IfnmConnectWindow extends JFrame {
                     nation.setExists(true);
 
                 } catch (NSException | FileNotFoundException e) {
-                    appendText("ERROR: \"" + nation.getName() + "\" does not exist.");
+                    appendText(String.format("ERROR: \"%s\" does not exist.", nation.getName()));
                     nation.setExists(false);
+
+                } catch (JTelegramException e) {
+                    appendText(String.format("ERROR: \"%s\" password is wrong.", nation.getName()));
+                    appendText("\tRemove and re-add that nation to update password.");
 
                 } catch (IOException e) {
                     appendText("ERROR: Cannot connect to NationStates.");

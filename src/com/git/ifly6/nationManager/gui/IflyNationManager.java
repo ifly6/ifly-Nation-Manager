@@ -561,6 +561,17 @@ public class IflyNationManager {
         JMenu mnFile = new JMenu("File");
         menuBar.add(mnFile);
 
+        JMenuItem mntmClose = new JMenuItem("Close");
+        mntmClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+        mntmClose.addActionListener((ae) -> {
+            frame.setVisible(false);
+            frame.dispose();
+        });
+        mnFile.add(mntmClose);
+
+        mnFile.addSeparator();
+
         JMenuItem mntmSave = new JMenuItem("Save");
         mntmSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         mntmSave.addActionListener((ae) -> {
@@ -639,7 +650,7 @@ public class IflyNationManager {
         JSeparator separator_1 = new JSeparator();
         mnFile.add(separator_1);
 
-        JMenuItem mntmOpenFolder = new JMenuItem("Open Folder");
+        JMenuItem mntmOpenFolder = new JMenuItem("Open Data Folder");
         mntmOpenFolder.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
                 InputEvent.SHIFT_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         mntmOpenFolder.addActionListener((ae) -> {
@@ -664,15 +675,6 @@ public class IflyNationManager {
             }
         });
         mnWindow.add(mntmMinimise);
-
-        JMenuItem mntmClose = new JMenuItem("Close");
-        mntmClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W,
-                Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-        mntmClose.addActionListener((ae) -> {
-            frame.setVisible(false);
-            frame.dispose();
-        });
-        mnWindow.add(mntmClose);
 
         JMenu mnHelp = new JMenu("Help");
         menuBar.add(mnHelp);
