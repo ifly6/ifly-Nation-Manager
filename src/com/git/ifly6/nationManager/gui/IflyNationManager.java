@@ -61,14 +61,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * @author ifly6
  */
 public class IflyNationManager {
+
+    private static final Logger LOGGER = Logger.getLogger(IflyNationManager.class.getName());
 
     public static final IflyVersion VERSION = new IflyVersion(0, 2);
     private static Path PERSIST_DIR;
@@ -81,6 +83,9 @@ public class IflyNationManager {
     private JList<IfnmNation> list;
 
     public static void main(String[] args) {
+
+        // Get us a reasonable-looking log format
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %2$s %5$s%6$s%n");
 
         // if we are on Mac, go here
         if (IflySystem.IS_OS_MAC) {
@@ -104,7 +109,7 @@ public class IflyNationManager {
         try {
             Files.createDirectories(PERSIST_DIR);
         } catch (IOException e) {
-            System.err.println("Could not create necessary directories for files. Terminating");
+            LOGGER.info("Could not create necessary directories for files. Terminating");
             return;
         }
 
@@ -178,7 +183,7 @@ public class IflyNationManager {
                     try {
                         nations = IfnmReader.read(NATIONS_STORE);
                     } catch (IOException e) {
-                        System.err.println("Could not retrieve the current nation list to verify non-duplication");
+                        LOGGER.info("Could not retrieve the current nation list to verify non-duplication");
                         return;
                     }
 
@@ -189,7 +194,7 @@ public class IflyNationManager {
                     if (!match) {
                         nations.add(newNation);
                     } else {
-                        System.err.println("Nation already exists in nation list");
+                        LOGGER.info("Nation already exists in nation list");
                         return;
                     }
 
@@ -197,7 +202,7 @@ public class IflyNationManager {
                     try {
                         IfnmWriter.write(NATIONS_STORE, nations);
                     } catch (IOException e) {
-                        System.err.println("Cannot save new nation to the store");
+                        LOGGER.info("Cannot save new nation to the store");
                     }
 
                 }
@@ -215,7 +220,7 @@ public class IflyNationManager {
                     try {
                         nations = IfnmReader.read(NATIONS_STORE);
                     } catch (IOException e) {
-                        System.err.println("Could not load nations list. Cannot remove it from something unloaded.");
+                        LOGGER.info("Could not load nations list. Cannot remove it from something unloaded.");
                         return;
                     }
 
@@ -230,7 +235,7 @@ public class IflyNationManager {
                     try {
                         IfnmWriter.write(NATIONS_STORE, nations);
                     } catch (IOException e) {
-                        System.err.println("Could not save the modified nations list to file.");
+                        LOGGER.info("Could not save the modified nations list to file.");
                     }
 
                 }
@@ -241,7 +246,7 @@ public class IflyNationManager {
                         List<String> lines = IfnmReader.list(IfnmReader.read(NATIONS_STORE));
                         lines.forEach(System.out::println); // print
                     } catch (IOException e) {
-                        System.err.println("Could not load data for display");
+                        LOGGER.info("Could not load data for display");
                         return;
                     }
 
@@ -254,7 +259,7 @@ public class IflyNationManager {
                     try {
                         nations = IfnmReader.read(NATIONS_STORE);
                     } catch (IOException e) {
-                        System.err.println("Could not load data for connecting");
+                        LOGGER.info("Could not load data for connecting");
                         return;
                     }
 
@@ -280,8 +285,8 @@ public class IflyNationManager {
 
             } catch (ParseException e) {
 
-                String opts = Stream.of(args).collect(Collectors.joining(" "));
-                System.err.println("Cannot parse options: " + opts);
+                String opts = String.join(" ", args);
+                LOGGER.info("Cannot parse options: " + opts);
                 e.printStackTrace();
 
                 System.out.println();
@@ -316,9 +321,8 @@ public class IflyNationManager {
 
     /**
      * Create the application.
-     * @wbp.parser.entryPoint
      */
-    public IflyNationManager() {
+    private IflyNationManager() {
         initialise();
     }
 
@@ -422,7 +426,7 @@ public class IflyNationManager {
                 }
             }
         });
-        list.setFont(new Font(Font.MONOSPACED, 0, 11));
+        list.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
 //        list.setCellRenderer(new DefaultListCellRenderer() {
 //            @Override
 //            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected,
@@ -451,8 +455,8 @@ public class IflyNationManager {
                 // throw error if duplicate
                 IfnmNation nation = new IfnmNation(pair.getLeft(), pair.getRight());
                 if (duplicate) {
-                    JOptionPane.showMessageDialog(frame, "Nation \"" + nation.getName() + "\" is already in the "
-                            + "list.\nRemove it first.", "Error", JOptionPane.PLAIN_MESSAGE, null);
+                    IflyDialogs.showMessageDialog(frame,"Nation \"" + nation.getName() + "\" is already in the "
+                            + "list.\nRemove it first.", "Error");
                     return;
                 }
 
@@ -488,12 +492,12 @@ public class IflyNationManager {
         btnShow.addActionListener(ae -> {
             Desktop desktop = Desktop.getDesktop();
             list.getSelectedValuesList().stream()
-                    .filter(IfnmNation::exists)
                     .map(IfnmNation::getLeft)
                     .forEach(n -> {
                         try {
                             desktop.browse(new URI("https://www.nationstates.net/nation=" + n));
                         } catch (IOException | URISyntaxException e) {
+
                             e.printStackTrace();
                         }
                     });
@@ -574,10 +578,9 @@ public class IflyNationManager {
         mntmLoad.addActionListener((ae) -> {
 
             if (!listModel.isEmpty()) {
-                int value = JOptionPane.showConfirmDialog(frame,
-                        "This will overwrite data. Continue?", "Warning",
-                        JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
-                if (value == JOptionPane.NO_OPTION) {
+                boolean value = IflyDialogs.showConfirmDialog(frame,
+                        "This will overwrite data. Continue?", "Warning", true);
+                if (!value) {
                     return;
                 }
             }
@@ -622,7 +625,7 @@ public class IflyNationManager {
                         listModel.addElement(nation);
 
                     } catch (IndexOutOfBoundsException e) {
-                        System.err.println("Error. Cannot process line: " + element);
+                        LOGGER.info("Error. Cannot process line: " + element);
                     }
                 }
 
@@ -653,8 +656,8 @@ public class IflyNationManager {
         menuBar.add(mnWindow);
 
         JMenuItem mntmMinimise = new JMenuItem("Minimise");
-        mntmMinimise
-                .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+        mntmMinimise.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         mntmMinimise.addActionListener((ae) -> {
             if (frame.getState() == Frame.NORMAL) {
                 frame.setState(Frame.ICONIFIED);
@@ -663,8 +666,8 @@ public class IflyNationManager {
         mnWindow.add(mntmMinimise);
 
         JMenuItem mntmClose = new JMenuItem("Close");
-        mntmClose
-                .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+        mntmClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         mntmClose.addActionListener((ae) -> {
             frame.setVisible(false);
             frame.dispose();
@@ -688,15 +691,13 @@ public class IflyNationManager {
 
         frame.setLocationRelativeTo(null);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    autosave();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    // otherwise, do nothing
-                }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                autosave();
+            } catch (IOException e) {
+                LOGGER.info("Saved");
+                e.printStackTrace();
+                // otherwise, do nothing
             }
         }));
     }
@@ -706,7 +707,7 @@ public class IflyNationManager {
 
         // change text if hash exists or not
         JLabel label = new JLabel(hashExists
-                ? "Input the master password."
+                ? "Input your master password."
                 : "Create a new master password.");
 
         JPasswordField passwordField = new JPasswordField();
@@ -721,10 +722,10 @@ public class IflyNationManager {
 
         if (option == JOptionPane.OK_OPTION) {
             String pass = new String(passwordField.getPassword());
-            if (!IflyStrings.isEmpty(pass)) {
-                return String.valueOf(passwordField.getPassword());
-            }
+            if (!IflyStrings.isEmpty(pass))
+                return new String(passwordField.getPassword());
         }
+
         return "ifnmDefaultPassword";    // return a default password
     }
 

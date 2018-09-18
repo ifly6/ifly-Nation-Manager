@@ -6,4 +6,7 @@
 
 .idea
 *.iml
-/.idea/
+classes/
+/src/META-INF/
+
+*.jar
