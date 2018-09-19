@@ -23,6 +23,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -41,6 +42,7 @@ import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.EventQueue;
 import java.awt.Font;
@@ -57,13 +59,14 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * @author ifly6
@@ -72,7 +75,9 @@ public class IflyNationManager {
 
     private static final Logger LOGGER = Logger.getLogger(IflyNationManager.class.getName());
 
+    @SuppressWarnings("WeakerAccess")
     public static final IflyVersion VERSION = new IflyVersion(0, 2);
+
     private static Path PERSIST_DIR;
     private static Path NATIONS_STORE;
     private static Path PASS_HASH_STORE;
@@ -157,13 +162,7 @@ public class IflyNationManager {
                     }
 
                 } else {
-                    boolean verify = false;
-                    try {
-                        verify = IfnmAuthenticator.verify(PASS_HASH_STORE, password);
-                    } catch (IOException ignored) {
-                    }
-
-                    if (!verify) {
+                    if (!IfnmAuthenticator.verify(PASS_HASH_STORE, password)) {
                         System.out.println("Provided password's hash does not match that on file. Stopped.");
                         return;
                     }
@@ -323,13 +322,91 @@ public class IflyNationManager {
      * Create the application.
      */
     private IflyNationManager() {
-        initialise();
+
+        // Load cryptographic information
+        String password = passwordPrompt(Files.exists(PASS_HASH_STORE));
+
+        try { // verification
+            if (!IfnmAuthenticator.verify(PASS_HASH_STORE, password)) {
+
+                boolean toDelete = IflyDialogs.showConfirmDialog(null,
+                        "Incorrect password. Delete existing hash and store to restart?",
+                        "Authentication error", true);
+
+                if (!toDelete) {
+                    System.exit(0); // exit
+                }
+
+                toDelete = IflyDialogs.showConfirmDialog(null,
+                        "Are you sure you want to delete the existing hash and nations store?",
+                        "Confirm", true);
+
+                if (toDelete) {
+                    Files.delete(PASS_HASH_STORE);
+                    Files.delete(NATIONS_STORE);
+                    IflyDialogs.showMessageDialog(null,
+                            "Deleted existing hash and nations file.",
+                            "Done");
+
+                } else {
+                    System.exit(0); // exit
+                }
+            }
+
+        } catch (IOException e) {
+
+            if (Files.notExists(PASS_HASH_STORE)) {
+                String hash = IfnmAuthenticator.generateHash(password);
+                try {
+                    IfnmAuthenticator.saveHash(PASS_HASH_STORE, hash);
+                } catch (IOException e1) {
+                    IflyDialogs.showMessageDialog(null,
+                            "Could not save password to file for future authentication.",
+                            "Error");
+                }
+
+            } else {
+                IflyDialogs.showMessageDialog(null, "Could not check password. Terminating.", "Error");
+                System.exit(0); // exit
+            }
+
+        }
+
+        // initialise the coder
+        coder = new IfnmCoder(password);
+
+        // delete the password
+        //noinspection UnusedAssignment
+        password = null;
+        System.gc();
+
+        // get the stored data
+        List<IfnmNation> nationList = new ArrayList<>();
+        if (Files.exists(NATIONS_STORE)) {
+            try {
+                nationList = IfnmReader.read(NATIONS_STORE);
+            } catch (IOException e) {
+                IflyDialogs.showMessageDialog(null, "Could not load stored nation data", "Error");
+
+                // automatically move old file
+                try {
+                    Files.move(NATIONS_STORE, NATIONS_STORE.getParent()
+                            .resolve(String.format("nation-store-old-%s.txt",
+                                    DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(Instant.now()))));
+                } catch (IOException e1) {
+                    IflyDialogs.showMessageDialog(null, "Unable to back up old nation data", "Error");
+                    System.exit(0);
+                }
+            }
+        }
+
+        initialise(nationList);
     }
 
     /**
      * Initialise the contents of the frame.
      */
-    private void initialise() {
+    private void initialise(List<IfnmNation> nationList) {
 
         frame = new JFrame();
         frame.setTitle("ifly Nation Manager " + IflyNationManager.VERSION.toString());
@@ -337,70 +414,10 @@ public class IflyNationManager {
         frame.setBounds(100, 100, 400, 600);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        { // Load cryptographic information
-            String password = passwordPrompt(Files.exists(PASS_HASH_STORE));
-
-            try { // verification
-                if (!IfnmAuthenticator.verify(PASS_HASH_STORE, password)) {
-
-                    boolean toDelete = IflyDialogs.showConfirmDialog(null,
-                            "Incorrect password. Delete existing hash and store to restart?",
-                            "Authentication error", true);
-
-                    if (!toDelete) {
-                        System.exit(0); // exit
-                    }
-
-                    toDelete = IflyDialogs.showConfirmDialog(null,
-                            "Are you sure you want to delete the existing hash and nations store?",
-                            "Confirm", true);
-
-                    if (toDelete) {
-                        Files.delete(PASS_HASH_STORE);
-                        Files.delete(NATIONS_STORE);
-                        IflyDialogs.showMessageDialog(null,
-                                "Deleted existing hash and nations file.",
-                                "Done");
-
-                    } else {
-                        System.exit(0); // exit
-                    }
-                }
-
-            } catch (IOException e) {
-
-                if (Files.notExists(PASS_HASH_STORE)) {
-                    String hash = IfnmAuthenticator.generateHash(password);
-                    try {
-                        IfnmAuthenticator.saveHash(PASS_HASH_STORE, hash);
-                    } catch (IOException e1) {
-                        IflyDialogs.showMessageDialog(null,
-                                "Could not save password to file for future authentication.",
-                                "Error");
-                    }
-
-                } else {
-                    IflyDialogs.showMessageDialog(null, "Could not check password. Terminating.", "Error");
-                    System.exit(0); // exit
-                }
-
-            }
-
-            // initialise the coder
-            coder = new IfnmCoder(password);
-
-        }
-
         DefaultListModel<IfnmNation> listModel = new DefaultListModel<>();
 
         // If available, load data
-        if (Files.exists(NATIONS_STORE)) {
-            try {
-                IfnmReader.read(NATIONS_STORE).forEach(listModel::addElement);
-            } catch (IOException e) {
-                IflyDialogs.showMessageDialog(frame, "Could not load stored nation data", "Error");
-            }
-        }
+        nationList.forEach(listModel::addElement);
 
         list = new JList<>(listModel);
         list.setSelectionModel(new DefaultListSelectionModel() {
@@ -439,30 +456,7 @@ public class IflyNationManager {
 
         JButton btnAdd = new JButton("+");
         btnAdd.setToolTipText("Add a new nation");
-        btnAdd.addActionListener(e -> {
-            IfnmNationDialog dialog = new IfnmNationDialog(coder);
-            IflyPair<String, String> pair = dialog.showDialog();
-            if (!IflyStrings.isEmpty(pair.getLeft()) && !IflyStrings.isEmpty(pair.getRight())) {
-
-                // check for duplicates
-                boolean duplicate = false;
-                for (int i = 0; i < listModel.getSize(); i++) {
-                    if (listModel.getElementAt(i).getName().equals(pair.getLeft())) {
-                        duplicate = true;
-                    }
-                }
-
-                // throw error if duplicate
-                IfnmNation nation = new IfnmNation(pair.getLeft(), pair.getRight());
-                if (duplicate) {
-                    IflyDialogs.showMessageDialog(frame,"Nation \"" + nation.getName() + "\" is already in the "
-                            + "list.\nRemove it first.", "Error");
-                    return;
-                }
-
-                listModel.addElement(nation); // otherwise add
-            }
-        });
+        btnAdd.addActionListener(e -> addNation(listModel));
 
         JButton btnRemove = new JButton("—");    // em-dash
         btnRemove.setToolTipText("Remove selected nations");
@@ -470,53 +464,19 @@ public class IflyNationManager {
 
         JButton btnConnect = new JButton("Connect");
         btnConnect.setToolTipText("Connect to selected nations");
-        btnConnect.addActionListener(ae -> EventQueue.invokeLater(() -> {
-            // get the selected values
-            List<IfnmNation> nations = list.getSelectedValuesList();
-            if (nations.isEmpty()) {
-                // stop if no nations are selected
-                IflyDialogs.showMessageDialog(frame, "No nations selected", "Error");
-                return;
-            }
-
-            // do connection
-            IfnmConnectWindow progressDialog = new IfnmConnectWindow();
-            progressDialog.showDialog(nations, coder);
-
-        }));
+        btnConnect.addActionListener(ae -> connectNations());
 
         JButton btnShow = new JButton("Show");
         btnShow.setToolTipText(
                 "Show selected nations in your browser. Only opens nations which are not marked with an (*), and therefore, "
                         + "have a good chance of existing.");
-        btnShow.addActionListener(ae -> {
-            Desktop desktop = Desktop.getDesktop();
-            list.getSelectedValuesList().stream()
-                    .map(IfnmNation::getLeft)
-                    .forEach(n -> {
-                        try {
-                            desktop.browse(new URI("https://www.nationstates.net/nation=" + n));
-                        } catch (IOException | URISyntaxException e) {
-
-                            e.printStackTrace();
-                        }
-                    });
-        });
+        btnShow.addActionListener(ae -> showInBrowser());
 
         JScrollPane scrollPane = new JScrollPane(list);
 
         JButton btnInspector = new JButton("i");
         btnInspector.setToolTipText("Open inspector for at-a-glance details about selected nations");
-        btnInspector.addActionListener(e -> {
-            List<IfnmNation> items = IntStream.of(list.getSelectedIndices())
-                    .mapToObj(listModel::getElementAt)
-                    .filter(IfnmNation::exists).collect(Collectors.toList());
-            if (!items.isEmpty()) {
-                new IfnmInspector(items);
-            } else {
-                IflyDialogs.showMessageDialog(frame, "No living nations selected.", "Message");
-            }
-        });
+        btnInspector.addActionListener(e -> openInspector());
 
         GroupLayout groupLayout = new GroupLayout(frame.getContentPane());
         groupLayout.setHorizontalGroup(
@@ -576,7 +536,7 @@ public class IflyNationManager {
         mntmSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         mntmSave.addActionListener((ae) -> {
             try {
-                autosave();
+                save();
             } catch (IOException e) {
                 IflyDialogs.showMessageDialog(frame, "Could not save nation data to file.", "Error");
             }
@@ -586,32 +546,7 @@ public class IflyNationManager {
         JMenuItem mntmLoad = new JMenuItem("Load");
         mntmLoad.setToolTipText("Imported files must have been generated with the same salt and password as this session");
         mntmLoad.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-        mntmLoad.addActionListener((ae) -> {
-
-            if (!listModel.isEmpty()) {
-                boolean value = IflyDialogs.showConfirmDialog(frame,
-                        "This will overwrite data. Continue?", "Warning", true);
-                if (!value) {
-                    return;
-                }
-            }
-
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Choose hash-compatible storage file...");
-            fileChooser.setCurrentDirectory(PERSIST_DIR.toFile());
-            fileChooser.showOpenDialog(frame);
-            Path savedFile = fileChooser.getSelectedFile().toPath();
-
-            listModel.clear();
-            try {
-                IfnmReader.read(savedFile).forEach(listModel::addElement);
-            } catch (IOException e) {
-                IflyDialogs.showMessageDialog(frame,
-                        String.format("Could not load data from %s", savedFile.toString()),
-                        "Error");
-            }
-
-        });
+        mntmLoad.addActionListener((ae) -> loadFile(listModel));
         mnFile.add(mntmLoad);
 
         JSeparator separator = new JSeparator();
@@ -619,32 +554,7 @@ public class IflyNationManager {
 
         JMenuItem mntmImport = new JMenuItem("Import From CSV");
         mntmImport.setToolTipText("CSV should be in form 'nation,password' on individual lines");
-        mntmImport.addActionListener((ae) -> {
-
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Choose applicable CSV file...");
-            fileChooser.setCurrentDirectory(PERSIST_DIR.toFile());
-            fileChooser.showOpenDialog(frame);
-            Path savedFile = fileChooser.getSelectedFile().toPath();
-
-            try {
-                List<String> lines = Files.readAllLines(savedFile);
-                for (String element : lines) {
-                    String[] sides = element.split(",");
-                    try {
-                        IfnmNation nation = new IfnmNation(sides[0], coder.encrypt(sides[1]));
-                        listModel.addElement(nation);
-
-                    } catch (IndexOutOfBoundsException e) {
-                        LOGGER.info("Error. Cannot process line: " + element);
-                    }
-                }
-
-            } catch (IOException e1) {
-                IflyDialogs.showMessageDialog(frame, "Cannot import from CSV.", "Error");
-            }
-
-        });
+        mntmImport.addActionListener((ae) -> importCSV(listModel));
         mnFile.add(mntmImport);
 
         JSeparator separator_1 = new JSeparator();
@@ -653,14 +563,7 @@ public class IflyNationManager {
         JMenuItem mntmOpenFolder = new JMenuItem("Open Data Folder");
         mntmOpenFolder.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
                 InputEvent.SHIFT_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-        mntmOpenFolder.addActionListener((ae) -> {
-            try {
-                Desktop.getDesktop().browse(PERSIST_DIR.toUri());
-            } catch (IOException e1) {
-                IflyDialogs.showMessageDialog(frame, "Cannot open folder.", "Error");
-                e1.printStackTrace();
-            }
-        });
+        mntmOpenFolder.addActionListener((ae) -> openDataDirectory());
         mnFile.add(mntmOpenFolder);
 
         JMenu mnWindow = new JMenu("Window");
@@ -695,7 +598,7 @@ public class IflyNationManager {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                autosave();
+                save();
             } catch (IOException e) {
                 LOGGER.info("Saved");
                 e.printStackTrace();
@@ -704,6 +607,173 @@ public class IflyNationManager {
         }));
     }
 
+    /**
+     * Adds nation to list provided
+     * @param listModel to which to add nation
+     */
+    private void addNation(DefaultListModel<IfnmNation> listModel) {
+        IfnmNationDialog dialog = new IfnmNationDialog(coder);
+        IflyPair<String, String> pair = dialog.showDialog();
+        if (!IflyStrings.isEmpty(pair.getLeft()) && !IflyStrings.isEmpty(pair.getRight())) {
+
+            // check for duplicates
+            boolean duplicate = false;
+            for (int i = 0; i < listModel.getSize(); i++) {
+                if (listModel.getElementAt(i).getName().equals(pair.getLeft())) {
+                    duplicate = true;
+                }
+            }
+
+            // throw error if duplicate
+            IfnmNation nation = new IfnmNation(pair.getLeft(), pair.getRight());
+            if (duplicate) {
+                IflyDialogs.showMessageDialog(frame, "Nation \"" + nation.getName() + "\" is already in the "
+                        + "list.\nRemove it first.", "Error");
+                return;
+            }
+
+            listModel.addElement(nation); // otherwise add
+        }
+    }
+
+    /**
+     * Sets up the {@link IfnmConnectWindow} to the selected nations in the list, then invokes.
+     */
+    private void connectNations() {
+        EventQueue.invokeLater(() -> {
+            // get the selected values
+            List<IfnmNation> nations = list.getSelectedValuesList();
+            if (nations.isEmpty()) {
+                // stop if no nations are selected
+                IflyDialogs.showMessageDialog(frame, "No nations selected", "Error");
+                return;
+            }
+
+            // do connection
+            IfnmConnectWindow progressDialog = new IfnmConnectWindow();
+            progressDialog.showDialog(nations, coder);
+
+        });
+    }
+
+    /**
+     * Shows selected nations in system browser.
+     */
+    private void showInBrowser() {
+        Desktop desktop = Desktop.getDesktop();
+        list.getSelectedValuesList().stream()
+                .map(IfnmNation::getLeft)
+                .forEach(n -> {
+                    try {
+                        desktop.browse(new URI("https://www.nationstates.net/nation=" + n));
+                    } catch (IOException | URISyntaxException e) {
+
+                        e.printStackTrace();
+                    }
+                });
+    }
+
+    /**
+     * Opens nations in inspector
+     */
+    private void openInspector() {
+        List<IfnmNation> items = list.getSelectedValuesList().stream()
+                .filter(IfnmNation::exists)
+                .collect(Collectors.toList());
+        if (!items.isEmpty()) {
+            new IfnmInspector(items);
+        } else {
+            IflyDialogs.showMessageDialog(frame, "No living nations selected.", "Message");
+        }
+    }
+
+    /**
+     * Loads a preexisting file. Should be configured to be hash-compatible. Otherwise, will be unable to decrypt
+     * passwords.
+     * @param listModel in which to deposit information
+     */
+    private void loadFile(DefaultListModel<IfnmNation> listModel) {
+        if (!listModel.isEmpty()) {
+            boolean value = IflyDialogs.showConfirmDialog(frame,
+                    "This will overwrite data. Continue?", "Warning", true);
+            if (!value) {
+                return;
+            }
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Choose hash-compatible storage file...");
+        fileChooser.setCurrentDirectory(PERSIST_DIR.toFile());
+        fileChooser.showOpenDialog(frame);
+        Path savedFile = fileChooser.getSelectedFile().toPath();
+
+        listModel.clear();
+        try {
+            IfnmReader.read(savedFile).forEach(listModel::addElement);
+        } catch (IOException e) {
+            IflyDialogs.showMessageDialog(frame,
+                    String.format("Could not load data from %s", savedFile.toString()),
+                    "Error");
+        }
+    }
+
+    private void openDataDirectory() {
+        try {
+            Desktop.getDesktop().browse(PERSIST_DIR.toUri());
+        } catch (IOException e1) {
+            IflyDialogs.showMessageDialog(frame, "Cannot open folder.", "Error");
+            e1.printStackTrace();
+        }
+    }
+
+    /**
+     * Imports data from CSV and puts it into the provided list model
+     * @param listModel in which to deposit information
+     */
+    private void importCSV(DefaultListModel<IfnmNation> listModel) {
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Choose applicable CSV file...");
+        fileChooser.setCurrentDirectory(PERSIST_DIR.toFile());
+        fileChooser.showOpenDialog(frame);
+        Path savedFile = fileChooser.getSelectedFile().toPath();
+
+        try {
+            List<String> lines = Files.readAllLines(savedFile);
+            List<String> failures = new ArrayList<>();
+            for (String element : lines) {
+                String[] sides = element.split(",");
+                try {
+                    IfnmNation nation = new IfnmNation(sides[0], coder.encrypt(sides[1]));
+                    listModel.addElement(nation);
+
+                } catch (IndexOutOfBoundsException e) {
+                    LOGGER.info("Error. Cannot process line: " + element);
+                    failures.add(sides[0].trim());
+                }
+            }
+
+            if (failures.size() > 0) {
+                IflyDialogs.showMessageDialog(frame,
+                        failures.size() > 1
+                                ? "Errors"
+                                : "Error"
+                                + "in processing " + String.join(",", failures),
+                        "Error");
+            }
+
+        } catch (IOException e1) {
+            IflyDialogs.showMessageDialog(frame, "Cannot import from CSV.", "Error");
+        }
+    }
+
+    /**
+     * Prompts user for password
+     * @param hashExists if true, then asks for existing password, otherwise, asks for new master password
+     * @return user input to prompt
+     * @throws HeadlessException if headless, from {@link JOptionPane#showOptionDialog(Component, Object, String, int,
+     *                           int, Icon, Object[], Object)}
+     */
     private String passwordPrompt(boolean hashExists) throws HeadlessException {
         JPanel panel = new JPanel();
 
@@ -728,10 +798,14 @@ public class IflyNationManager {
                 return new String(passwordField.getPassword());
         }
 
-        return "ifnmDefaultPassword";    // return a default password
+        return "ifnmDefaultPassword"; // return a default password
     }
 
-    private void autosave() throws IOException {
+    /**
+     * Saves information to file using {@link IfnmWriter}, after converting to <code>List&lt;IfnmNation&gt;</code>.
+     * @throws IOException from {@link IfnmWriter#write(Path, List)}
+     */
+    private void save() throws IOException {
         List<IfnmNation> nations = new ArrayList<>();
         for (int i = 0; i < list.getModel().getSize(); i++)
             nations.add(list.getModel().getElementAt(i));

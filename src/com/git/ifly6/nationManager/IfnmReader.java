@@ -16,7 +16,7 @@ public class IfnmReader {
      * Reads a list of <code>IfnmNation</code>s from a file in the format created by {@link IfnmWriter}.
      * @param path to read
      * @return the list of nations
-     * @throws IOException
+     * @throws IOException if thrown by {@link Files#readAllLines(Path)}
      */
     public static List<IfnmNation> read(Path path) throws IOException {
         List<String> lines = Files.readAllLines(path);
@@ -27,9 +27,9 @@ public class IfnmReader {
         List<IfnmNation> nations = new ArrayList<>();
         for (String line : lines) {
             String[] s = line.split(IfnmWriter.DELIMITER);
-            if (s.length == 3) nations.add(
-                    new IfnmNation(s[0], s[1]) // create nation
-                            .setExists(Boolean.parseBoolean(s[2]))); // set existence state
+            if (s.length == 3)
+                nations.add(new IfnmNation(s[0], s[1]) // create nation
+                        .setExists(Boolean.parseBoolean(s[2]))); // with this existence state
         }
 
         return dropDuplicates(nations);

@@ -17,12 +17,12 @@ public class IfnmWriter {
     /**
      * Delimiter to use with generated files
      */
-    public static final String DELIMITER = "\t";
+    static final String DELIMITER = "\t";
 
     /**
      * Defines the structure of the header. See {@link IfnmWriter#createHeader(int)}
      */
-    public static final String FORMAT = "# ifly nation manager save file\n" +
+    private static final String FORMAT = "# ifly nation manager save file\n" +
             "# created %s with %d nations";
 
     private IfnmWriter() {

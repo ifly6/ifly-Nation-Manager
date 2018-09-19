@@ -26,9 +26,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * A window which handles the process of connecting to the provided nations and putting the calls together to decode the
+ * passwords necessary for the nation.
  * @author ifly6
  */
-public class IfnmConnectWindow extends JFrame {
+@SuppressWarnings("UnusedReturnValue")
+class IfnmConnectWindow extends JFrame {
 
     private static final long serialVersionUID = IflyNationManager.VERSION.major;
 
@@ -39,7 +42,7 @@ public class IfnmConnectWindow extends JFrame {
     /**
      * Create the dialog.
      */
-    public IfnmConnectWindow() {
+    IfnmConnectWindow() {
 
         setTitle("Connecting...");
         setBounds(100, 100, 400, 300);
@@ -95,7 +98,12 @@ public class IfnmConnectWindow extends JFrame {
         setLocationRelativeTo(null);    // centre
     }
 
-    public void showDialog(List<IfnmNation> nations, IfnmCoder coder) {
+    /**
+     * Shows the dialog and, in another thread, connects the nation to NationStates.
+     * @param nations is a list of nations with which to connect
+     * @param coder   , set up for decoding the hashes back to passwords
+     */
+    void showDialog(List<IfnmNation> nations, IfnmCoder coder) {
 
         new Thread(() -> {
             setVisible(true);
@@ -109,7 +117,7 @@ public class IfnmConnectWindow extends JFrame {
                 try {
                     NSConnection connection = new NSConnection(createApiQuery(name));
                     Map<String, String> entries = new HashMap<>();
-                    entries.put("Password", coder.decrypt(encryptedPass));
+                    entries.put("Password", coder.decrypt(encryptedPass)); // decrypt
                     connection.setHeaders(entries);
                     connection.connect();
 
@@ -136,21 +144,39 @@ public class IfnmConnectWindow extends JFrame {
         }).start();
     }
 
+    /**
+     * Creates an API query with the proper formatting and name
+     * @param name to query to
+     * @return the string version of the URL with which to connect
+     */
     static String createApiQuery(String name) {
-        return NSConnection.API_PREFIX + "nation=" + name + "&q=unread";
+        name = name.trim().toLowerCase().replace(" ", "_");
+        return NSConnection.API_PREFIX + String.format("nation=%s&q=unread", name);
     }
 
-    public IfnmConnectWindow appendText(String input) {
-        if (textArea.getText() == null || textArea.getText().trim().length() == 0) {
+    /**
+     * Appends text to the text area at the centre of the dialog
+     * @param input to add
+     * @return the dialog
+     */
+    private IfnmConnectWindow appendText(String input) {
+        if (textArea.getText() == null || textArea.getText().trim().length() == 0)
             textArea.setText(input);
-        } else {
+
+        else {
             textArea.append("\n" + input);
             textArea.setCaretPosition(textArea.getText().length());
         }
         return this;
     }
 
-    public IfnmConnectWindow setProgress(int n, int max) {
+    /**
+     * Sets how far we are on the dialog's progress bar
+     * @param n   steps of <code>max</code>
+     * @param max max steps
+     * @return the dialog
+     */
+    private IfnmConnectWindow setProgress(int n, int max) {
         progressBar.setMaximum(max);
         progressBar.setValue(n);
         return this;

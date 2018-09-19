@@ -4,7 +4,8 @@ package com.git.ifly6.nationManager.gui;
 import com.git.ifly6.iflyLibrary.generics.IflyPair;
 
 /**
- * The <code>IfnmNation</code> class holds a nation reference name (automatically formatted)
+ * The <code>IfnmNation</code> class holds a nation reference name (automatically formatted) and the <b>hash</b> of the
+ * nation's password. It also holds a variable about whether it exists or not.
  * @author ifly6
  */
 public class IfnmNation extends IflyPair<String, String> {
@@ -34,7 +35,7 @@ public class IfnmNation extends IflyPair<String, String> {
     }
 
     /**
-     * Returns string representation.
+     * Returns string representation of the nation, which is its name
      * @return the nation name, with asterisk appended if nation does not exist
      */
     @Override
