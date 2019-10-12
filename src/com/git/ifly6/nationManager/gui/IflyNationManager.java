@@ -76,7 +76,7 @@ public class IflyNationManager {
     private static final Logger LOGGER = Logger.getLogger(IflyNationManager.class.getName());
 
     @SuppressWarnings("WeakerAccess")
-    public static final IflyVersion VERSION = new IflyVersion(0, 2);
+    public static final IflyVersion VERSION = new IflyVersion(2, 0);
 
     private static Path PERSIST_DIR;
     private static Path NATIONS_STORE;
