@@ -1,4 +1,3 @@
-/* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
 import com.git.ifly6.iflyLibrary.generics.IflyPair;
@@ -108,6 +107,10 @@ class IfnmNationDialog extends JDialog {
 
             {
                 JButton cancelButton = new JButton("Cancel");
+                cancelButton.addActionListener(e -> {
+                    setVisible(false);
+                    dispose();
+                });
                 cancelButton.setActionCommand("Cancel");
                 buttonPane.add(cancelButton);
             }

@@ -1,7 +1,7 @@
-/* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
 import com.git.ifly6.iflyLibrary.generics.IflyPair;
+import com.git.ifly6.nsapi.ApiUtils;
 
 /**
  * The <code>IfnmNation</code> class holds a nation reference name (automatically formatted) and the <b>hash</b> of the
@@ -13,8 +13,8 @@ public class IfnmNation extends IflyPair<String, String> {
     private static final long serialVersionUID = IflyNationManager.VERSION.major;
     private boolean exists = true;
 
-    public IfnmNation(String nationReference, String passwordHash) {
-        super(nationReference.trim().toLowerCase().replace(" ", "_"), passwordHash);
+    public IfnmNation(String n, String hash) {
+        super(ApiUtils.ref(n), hash);
     }
 
     public boolean exists() {
@@ -40,7 +40,7 @@ public class IfnmNation extends IflyPair<String, String> {
      */
     @Override
     public String toString() {    // override to allow for correct display
-        return this.getName() + (exists ? "" : "*");
+        return (exists ? "" : "* ") + this.getName();
     }
 
 }

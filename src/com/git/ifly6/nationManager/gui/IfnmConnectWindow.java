@@ -1,10 +1,9 @@
-/* Copyright (c) 2017 Kevin Wong. All Rights Reserved. */
 package com.git.ifly6.nationManager.gui;
 
-import com.git.ifly6.javatelegram.JTelegramException;
 import com.git.ifly6.nationManager.IfnmCoder;
 import com.git.ifly6.nsapi.NSConnection;
 import com.git.ifly6.nsapi.NSException;
+import com.git.ifly6.nsapi.telegram.JTelegramException;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -37,7 +36,7 @@ class IfnmConnectWindow extends JFrame {
 
     private JTextArea textArea;
     private JProgressBar progressBar;
-    private JButton btnOk;
+    private JButton btnClose;
 
     /**
      * Create the dialog.
@@ -64,8 +63,8 @@ class IfnmConnectWindow extends JFrame {
 
         JScrollPane scrollPane = new JScrollPane(textArea);
 
-        btnOk = new JButton("Ok");
-        btnOk.addActionListener((ae) -> {
+        btnClose = new JButton("Close");
+        btnClose.addActionListener((ae) -> {
             setVisible(false);
             dispose();
         });
@@ -76,7 +75,7 @@ class IfnmConnectWindow extends JFrame {
                         .addGroup(gl_contentPanel.createSequentialGroup()
                                 .addComponent(progressBar, GroupLayout.DEFAULT_SIZE, 381, Short.MAX_VALUE)
                                 .addPreferredGap(ComponentPlacement.RELATED)
-                                .addComponent(btnOk, GroupLayout.PREFERRED_SIZE, 81, GroupLayout.PREFERRED_SIZE))
+                                .addComponent(btnClose, GroupLayout.PREFERRED_SIZE, 81, GroupLayout.PREFERRED_SIZE))
                         .addGroup(gl_contentPanel.createSequentialGroup()
                                 .addComponent(lblProgressInConnections)
                                 .addContainerGap(279, Short.MAX_VALUE))
@@ -89,7 +88,7 @@ class IfnmConnectWindow extends JFrame {
                                 .addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 110, Short.MAX_VALUE)
                                 .addPreferredGap(ComponentPlacement.RELATED)
                                 .addGroup(gl_contentPanel.createParallelGroup(Alignment.TRAILING, false)
-                                        .addComponent(btnOk, GroupLayout.PREFERRED_SIZE, 24, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(btnClose, GroupLayout.PREFERRED_SIZE, 24, GroupLayout.PREFERRED_SIZE)
                                         .addComponent(progressBar, GroupLayout.PREFERRED_SIZE, 24,
                                                 GroupLayout.PREFERRED_SIZE))));
         contentPanel.setLayout(gl_contentPanel);
@@ -104,16 +103,15 @@ class IfnmConnectWindow extends JFrame {
      * @param coder   , set up for decoding the hashes back to passwords
      */
     void showDialog(List<IfnmNation> nations, IfnmCoder coder) {
-
         new Thread(() -> {
             setVisible(true);
 
-            btnOk.setEnabled(false);
+            btnClose.setEnabled(false);
             for (int i = 0; i < nations.size(); i++) {
 
                 IfnmNation nation = nations.get(i);
-                String name = nation.getLeft();
-                String encryptedPass = nation.getRight();
+                String name = nation.getName();
+                String encryptedPass = nation.getPassword();
                 try {
                     NSConnection connection = new NSConnection(createApiQuery(name));
                     Map<String, String> entries = new HashMap<>();
@@ -139,7 +137,7 @@ class IfnmConnectWindow extends JFrame {
 
                 setProgress(i + 1, nations.size());
             }
-            btnOk.setEnabled(true);
+            btnClose.setEnabled(true);
 
         }).start();
     }
