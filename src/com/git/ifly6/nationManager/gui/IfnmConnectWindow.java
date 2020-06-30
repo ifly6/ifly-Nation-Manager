@@ -1,12 +1,12 @@
 package com.git.ifly6.nationManager.gui;
 
+import com.git.ifly6.iflyLibrary.IflySystem;
 import com.git.ifly6.nationManager.IfnmCoder;
 import com.git.ifly6.nsapi.NSConnection;
 import com.git.ifly6.nsapi.NSException;
 import com.git.ifly6.nsapi.telegram.JTelegramException;
 
-import javax.swing.GroupLayout;
-import javax.swing.GroupLayout.Alignment;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -14,9 +14,8 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.LayoutStyle.ComponentPlacement;
-import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -44,24 +43,27 @@ class IfnmConnectWindow extends JFrame {
     IfnmConnectWindow() {
 
         setTitle("Connecting...");
-        setBounds(100, 100, 400, 300);
+
+        Dimension size = new Dimension(500, 300);
+        setSize(size);
+        setMinimumSize(size);
+
+        JPanel content = new JPanel();
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        content.setLayout(new BorderLayout(5, 5));
 
         getContentPane().setLayout(new BorderLayout());
-        JPanel contentPanel = new JPanel();
-        contentPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        getContentPane().add(content, BorderLayout.CENTER);
 
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
-
-        JLabel lblProgressInConnections = new JLabel("Detailed connection progress:");
+        if (IflySystem.IS_OS_MAC)
+            progressBar.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 0));
 
         textArea = new JTextArea();
-        textArea.setBorder(new EmptyBorder(5, 5, 5, 5));
-        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
         textArea.setEditable(false);
-
-        JScrollPane scrollPane = new JScrollPane(textArea);
 
         btnClose = new JButton("Close");
         btnClose.addActionListener((ae) -> {
@@ -69,29 +71,17 @@ class IfnmConnectWindow extends JFrame {
             dispose();
         });
 
-        GroupLayout gl_contentPanel = new GroupLayout(contentPanel);
-        gl_contentPanel.setHorizontalGroup(
-                gl_contentPanel.createParallelGroup(Alignment.TRAILING)
-                        .addGroup(gl_contentPanel.createSequentialGroup()
-                                .addComponent(progressBar, GroupLayout.DEFAULT_SIZE, 381, Short.MAX_VALUE)
-                                .addPreferredGap(ComponentPlacement.RELATED)
-                                .addComponent(btnClose, GroupLayout.PREFERRED_SIZE, 81, GroupLayout.PREFERRED_SIZE))
-                        .addGroup(gl_contentPanel.createSequentialGroup()
-                                .addComponent(lblProgressInConnections)
-                                .addContainerGap(279, Short.MAX_VALUE))
-                        .addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 468, Short.MAX_VALUE));
-        gl_contentPanel.setVerticalGroup(
-                gl_contentPanel.createParallelGroup(Alignment.LEADING)
-                        .addGroup(gl_contentPanel.createSequentialGroup()
-                                .addComponent(lblProgressInConnections)
-                                .addPreferredGap(ComponentPlacement.RELATED)
-                                .addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 110, Short.MAX_VALUE)
-                                .addPreferredGap(ComponentPlacement.RELATED)
-                                .addGroup(gl_contentPanel.createParallelGroup(Alignment.TRAILING, false)
-                                        .addComponent(btnClose, GroupLayout.PREFERRED_SIZE, 24, GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(progressBar, GroupLayout.PREFERRED_SIZE, 24,
-                                                GroupLayout.PREFERRED_SIZE))));
-        contentPanel.setLayout(gl_contentPanel);
+        {
+            content.add(new JScrollPane(textArea), BorderLayout.CENTER);
+            content.add(new JLabel("Detailed connection progress:"), BorderLayout.NORTH);
+
+            JPanel bottomPanel = new JPanel();
+            bottomPanel.setLayout(new BorderLayout(5, 5));
+            bottomPanel.add(progressBar, BorderLayout.CENTER);
+            bottomPanel.add(btnClose, BorderLayout.EAST);
+
+            content.add(bottomPanel, BorderLayout.SOUTH);
+        }
 
         pack();
         setLocationRelativeTo(null);    // centre

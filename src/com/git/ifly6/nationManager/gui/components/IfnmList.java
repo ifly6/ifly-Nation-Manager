@@ -3,10 +3,11 @@ package com.git.ifly6.nationManager.gui.components;
 import com.git.ifly6.nationManager.gui.IfnmNation;
 import com.git.ifly6.nsapi.ApiUtils;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
-import javax.swing.DefaultListSelectionModel;
 import javax.swing.JList;
 import javax.swing.ListModel;
+import javax.swing.ListSelectionModel;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,28 +69,10 @@ public class IfnmList extends JList<IfnmNation> {
         data.forEach(listModel::addElement);
 
         IfnmList list = new IfnmList(listModel);
-        list.setSelectionModel(new SelectionModel());
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         list.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        list.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
 
         return list;
-    }
-
-    private static class SelectionModel extends DefaultListSelectionModel {
-        private static final long serialVersionUID = 1L;
-        boolean gestureStarted = false;
-
-        @Override
-        public void setSelectionInterval(int index0, int index1) {
-            if (!gestureStarted)
-                if (isSelectedIndex(index0)) super.removeSelectionInterval(index0, index1);
-                else super.addSelectionInterval(index0, index1);
-            gestureStarted = true;
-        }
-
-        @Override
-        public void setValueIsAdjusting(boolean isAdjusting) {
-            if (!isAdjusting)
-                gestureStarted = false;
-        }
     }
 }

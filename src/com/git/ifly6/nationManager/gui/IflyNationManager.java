@@ -165,7 +165,6 @@ public class IflyNationManager {
         frame.setTitle("ifly Nation Manager " + IflyNationManager.VERSION.toString());
 
         frame.setMinimumSize(new Dimension(400, 500));
-        frame.setBounds(100, 100, 400, 600);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         list = IfnmList.createList(nationList);
@@ -190,14 +189,13 @@ public class IflyNationManager {
 
         {  // main content panel
             JPanel content = new JPanel();
-            content.setLayout(new BorderLayout());
-            content.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            content.setLayout(new BorderLayout(5, 5));
+            content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
             content.add(new JScrollPane(list), BorderLayout.CENTER);
 
             {  // bottom content with the two panels on bottom left and bottom right
                 JPanel bottomContent = new JPanel();
                 bottomContent.setLayout(new BorderLayout());
-                bottomContent.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
                 JPanel bottomLeft = new JPanel();
                 bottomLeft.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
